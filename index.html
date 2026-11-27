@@ -80,15 +80,28 @@
                 </div>
             </div>
             <div class="flex gap-3 overflow-x-auto hide-scrollbar">
-                <button id="loginBtn" onclick="openLoginModal()" class="shrink-0 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded shadow transition text-sm font-medium">
+                <!-- 載入紀錄按鈕 (所有人可見) -->
+                <button onclick="openHistoryModal()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded shadow transition text-sm font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-cloud-arrow-down mr-2"></i>載入紀錄
                 </button>
-                <button onclick="exportCSV()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded shadow transition text-sm font-medium">
+
+                <!-- 登入按鈕 -->
+                <button id="loginBtn" onclick="openLoginModal()" class="shrink-0 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded shadow transition text-sm font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-user-lock mr-2"></i>管理員登入
+                </button>
+                
+                <!-- 登出按鈕 (預設隱藏) -->
+                <button id="logoutBtn" onclick="logout()" class="hidden shrink-0 bg-rose-600 hover:bg-rose-500 px-4 py-2 rounded shadow transition text-sm font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-right-from-bracket mr-2"></i>登出
+                </button>
+
+                <button onclick="exportCSV()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded shadow transition text-sm font-medium whitespace-nowrap">
                     <i class="fa-solid fa-file-csv mr-2"></i>匯出 CSV
                 </button>
-                <button onclick="window.print()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded shadow transition text-sm font-medium">
+                <button onclick="window.print()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded shadow transition text-sm font-medium whitespace-nowrap">
                     <i class="fa-solid fa-print mr-2"></i>列印 / PDF
                 </button>
-                <button onclick="saveToCloud()" class="admin-only bg-teal-500 hover:bg-teal-400 px-4 py-2 rounded shadow transition text-sm font-medium">
+                <button onclick="saveToCloud()" class="admin-only bg-teal-500 hover:bg-teal-400 px-4 py-2 rounded shadow transition text-sm font-medium whitespace-nowrap">
                     <i class="fa-solid fa-cloud-arrow-up mr-2"></i>儲存至雲端
                 </button>
             </div>
