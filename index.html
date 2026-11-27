@@ -1,85 +1,585 @@
-<script>
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style id="dynamicPrintStyle">
+    @page { size: A4 landscape; margin: 10mm; }
+  </style>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      padding: 16px;
+      background-color: #f0f2f5;
+      color: #333;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* 頂部控制列 */
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #2c3e50;
+      color: white;
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      gap: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+    .top-bar h1 {
+      margin: 0;
+      font-size: 18px;
+      white-space: nowrap;
+    }
+    .rundown-selector {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      min-width: 230px;
+      font-weight: bold;
+      background-color: #fff;
+      color: #2c3e50;
+    }
+
+    /* 裝置版面切換器 (Desktop / Tablet / Mobile) */
+    .device-switcher {
+      display: inline-flex;
+      background-color: #1a252f;
+      padding: 3px;
+      border-radius: 7px;
+      gap: 3px;
+    }
+    .device-btn {
+      padding: 6px 11px;
+      border: none;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      background: transparent;
+      color: #94a3b8;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .device-btn.active {
+      background-color: #38bdf8;
+      color: #0f172a;
+    }
+    .device-btn:hover:not(.active) {
+      color: white;
+    }
+
+    .mode-switch {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .mode-btn {
+      padding: 8px 13px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .mode-btn.active { background-color: #3498db; color: white; box-shadow: 0 0 0 2px white; }
+    .mode-btn.inactive { background-color: #34495e; color: #bdc3c7; }
+    .btn-save { background-color: #e67e22; color: white; }
+    .btn-new { background-color: #16a085; color: white; }
+    .btn-del-rd { background-color: #c0392b; color: white; }
+    .print-btn { background-color: #27ae60; color: white; }
+
+    /* 主內容外框 */
+    .main-wrapper {
+      margin: 0 auto;
+      transition: max-width 0.2s ease;
+    }
+    body.layout-desktop .main-wrapper { max-width: 100%; }
+    body.layout-tablet .main-wrapper { max-width: 860px; }
+    body.layout-mobile .main-wrapper { max-width: 480px; }
+
+    /* 區塊卡片容器 */
+    .container {
+      background: white;
+      padding: 18px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+    }
+    .section-header h2 {
+      color: #2c3e50;
+      margin: 0;
+      font-size: 17px;
+    }
+    .toggle-btn {
+      background: #eef2f5;
+      border: none;
+      color: #2c3e50;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* 活動基本資料 */
+    .event-info-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .event-field {
+      display: flex;
+      align-items: center;
+      background-color: #f8fafc;
+      padding: 9px 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .event-field label { font-weight: bold; margin-right: 6px; white-space: nowrap; color: #475569; font-size: 14px; }
+    .event-field input { flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; min-width: 0; }
+    .event-view-val { display: none; font-weight: bold; color: #0f172a; font-size: 15px; }
+
+    /* 崗位負責人 */
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+    .role-item {
+      display: flex;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #eee;
+    }
+    .role-item label { width: 85px; font-weight: bold; font-size: 13px; color: #475569; flex-shrink: 0; }
+    .role-item input { flex: 1; padding: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; min-width: 0; }
+    .role-view-val { display: none; flex: 1; font-size: 14px; font-weight: 500; color: #1e293b; }
+
+    /* 桌面版表格樣式 */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 6px;
+      text-align: center;
+    }
+    th { background-color: #eef2f5; font-weight: bold; color: #1e293b; }
+    tfoot td { background-color: #fdf2e9; font-weight: bold; }
+    td input, td select {
+      width: 100%;
+      padding: 6px 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .text-left { text-align: left !important; }
+    .view-text { display: none; }
+
+    /* 操作列按鈕組 (上移 / 下移 / 刪除) */
+    .row-actions {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-move {
+      background-color: #64748b;
+      color: white;
+      border: none;
+      padding: 5px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .btn-move:hover { background-color: #475569; }
+    .btn-danger {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 5px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .btn-danger:hover { background-color: #c0392b; }
+
+    /* 多媒體與Channel標籤顏色 */
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 12px; font-weight: bold; white-space: nowrap; }
+    .badge-theme { background-color: #d5e8d4; color: #2d572c; }
+    .badge-msg { background-color: #f8cecc; color: #8a2b27; }
+    .badge-testimony { background-color: #e1d5e7; color: #563d7c; }
+    .badge-lyrics { background-color: #dae8fc; color: #1b4f72; }
+    .badge-promo { background-color: #a20025; color: #ffffff; }
+    .ch-badge { display: inline-block; background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+
+    .btn { background-color: #3498db; color: white; border: none; padding: 9px 15px; cursor: pointer; border-radius: 6px; font-size: 14px; font-weight: bold; margin-top: 12px; }
+    .btn:hover { background-color: #2980b9; }
+    .status-banner { display: none; padding: 10px; border-radius: 6px; margin-bottom: 14px; font-weight: bold; text-align: center; background-color: #fef9e7; color: #b7950b; border: 1px solid #f9e79f; }
+
+    /* 新增/複製場次選擇視窗 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.55);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal-box {
+      background: white;
+      padding: 22px 24px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+    }
+    .modal-box h3 { margin-top: 0; color: #2c3e50; font-size: 18px; }
+    .modal-box p { font-size: 14px; color: #475569; margin-bottom: 10px; }
+    .modal-select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 15px;
+      margin-bottom: 16px;
+      background-color: #f8fafc;
+    }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-actions button { padding: 9px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; }
+    .btn-modal-cancel { background-color: #94a3b8; color: white; }
+    .btn-modal-confirm { background-color: #16a085; color: white; }
+
+    /* 閱讀模式控制 */
+    body.view-mode .edit-control, body.view-mode .action-col { display: none !important; }
+    body.view-mode .view-text, body.view-mode .role-view-val, body.view-mode .event-view-val { display: inline-block; }
+    body.view-mode .role-item { border: none; border-bottom: 1px dashed #e2e8f0; }
+
+    /* 管理模式下隱藏版面模擬器 */
+    body.edit-mode .device-switcher { display: none; }
+    body.edit-mode .main-wrapper { max-width: 100% !important; }
+    body.edit-mode #rundownTable { min-width: 920px; }
+    body.edit-mode #bandTable { min-width: 550px; }
+
+    /* ==================== 1. TABLET 模式專屬樣式 ==================== */
+    body.view-mode.layout-tablet .event-info-grid { grid-template-columns: repeat(2, 1fr); }
+    body.view-mode.layout-tablet .roles-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    body.view-mode.layout-tablet table { font-size: 13px; }
+    body.view-mode.layout-tablet th, body.view-mode.layout-tablet td { padding: 6px 4px; }
+    body.view-mode.layout-tablet .badge { padding: 2px 6px; font-size: 11px; }
+
+    /* ==================== 2. MOBILE 模式專屬樣式 ==================== */
+    body.view-mode.layout-mobile .container { padding: 14px; }
+    body.view-mode.layout-mobile .event-info-grid { grid-template-columns: 1fr; gap: 8px; }
+    body.view-mode.layout-mobile .roles-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+    body.view-mode.layout-mobile .role-item {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 6px 8px;
+      background: #f8fafc;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0 !important;
+    }
+    body.view-mode.layout-mobile .role-item label { width: auto; font-size: 12px; color: #64748b; margin-bottom: 2px; }
+    body.view-mode.layout-mobile .role-view-val { font-size: 14px; font-weight: bold; }
+
+    /* Mobile 卡片化：樂隊樂器列表 */
+    body.view-mode.layout-mobile #bandTable thead { display: none; }
+    body.view-mode.layout-mobile #bandTable,
+    body.view-mode.layout-mobile #bandTable tbody,
+    body.view-mode.layout-mobile #bandTable tr,
+    body.view-mode.layout-mobile #bandTable td {
+      display: block;
+      width: 100%;
+    }
+    body.view-mode.layout-mobile #bandTable tbody tr {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-left: 4px solid #8b5cf6;
+      border-radius: 7px;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    body.view-mode.layout-mobile #bandTable tbody td {
+      border: none;
+      padding: 2px 0;
+      width: auto;
+      text-align: left !important;
+      font-size: 14px;
+    }
+    body.view-mode.layout-mobile #bandTable tbody td.band-col-seq { display: none; }
+    body.view-mode.layout-mobile #bandTable tbody td.band-col-inst { font-weight: bold; color: #1e293b; font-size: 15px; }
+    body.view-mode.layout-mobile #bandTable tbody td.band-col-player { color: #475569; }
+    body.view-mode.layout-mobile #bandTable tbody td.band-col-player::before { content: "👤 "; }
+
+    /* Mobile 卡片化：節目流程表 */
+    body.view-mode.layout-mobile #rundownTable thead { display: none; }
+    body.view-mode.layout-mobile #rundownTable,
+    body.view-mode.layout-mobile #rundownTable tbody,
+    body.view-mode.layout-mobile #rundownTable tr,
+    body.view-mode.layout-mobile #rundownTable td {
+      display: block;
+      width: 100%;
+    }
+    body.view-mode.layout-mobile #rundownTable tbody tr {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-left: 5px solid #3498db;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      page-break-inside: avoid;
+    }
+    body.view-mode.layout-mobile #rundownTable tbody td {
+      border: none;
+      padding: 3px 0;
+      text-align: left !important;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+    body.view-mode.layout-mobile #rundownTable tbody td.empty-cell { display: none; }
+    body.view-mode.layout-mobile #rundownTable tbody td.col-seq {
+      display: inline-block; width: auto; background: #2c3e50; color: white;
+      font-size: 12px; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-right: 8px; margin-bottom: 4px;
+    }
+    body.view-mode.layout-mobile #rundownTable tbody td.col-time {
+      display: inline-block; width: auto; font-size: 16px; font-weight: bold;
+      color: #2980b9; margin-right: 8px; margin-bottom: 4px;
+    }
+    body.view-mode.layout-mobile #rundownTable tbody td.col-mins {
+      display: inline-block; width: auto; font-size: 12px; color: #64748b;
+      background: #f1f5f9; padding: 1px 7px; border-radius: 4px; margin-bottom: 4px;
+    }
+    body.view-mode.layout-mobile #rundownTable tbody td.col-mins::after { content: " 分鐘"; }
+    body.view-mode.layout-mobile #rundownTable tbody td.col-title {
+      font-size: 16px; font-weight: bold; color: #0f172a; padding: 4px 0 6px 0;
+      border-bottom: 1px dashed #e2e8f0; margin-bottom: 4px;
+    }
+    body.view-mode.layout-mobile #rundownTable tbody td[data-label]::before {
+      content: attr(data-label) "："; font-weight: bold; color: #64748b; font-size: 13px; margin-right: 4px;
+    }
+    body.view-mode.layout-mobile #rundownTable tfoot,
+    body.view-mode.layout-mobile #rundownTable tfoot tr,
+    body.view-mode.layout-mobile #rundownTable tfoot td {
+      display: block; width: 100%; text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .top-bar { padding: 12px; flex-direction: column; align-items: stretch; }
+      .top-bar-left { flex-direction: column; align-items: stretch; }
+      .rundown-selector { width: 100%; min-width: unset; font-size: 15px; }
+      .device-switcher { width: 100%; justify-content: space-between; }
+      .device-btn { flex: 1; text-align: center; }
+      .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .mode-switch .print-btn { grid-column: span 2; }
+    }
+
+    @media print {
+      .top-bar, .edit-control, .action-col, .status-banner, .toggle-btn, .modal-overlay { display: none !important; }
+      body { background: white !important; padding: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .main-wrapper { max-width: 100% !important; width: 100% !important; }
+      .container { box-shadow: none !important; border: 1px solid #e2e8f0; padding: 12px !important; margin-bottom: 12px !important; page-break-inside: avoid; }
+      body.layout-mobile .container { page-break-inside: auto; }
+    }
+  </style>
+</head>
+<body class="view-mode layout-desktop">
+
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <h1>⛪ 教會福音聚會 Rundown</h1>
+      <select id="rundownSelector" class="rundown-selector" onchange="onSelectRundown()">
+        <option value="">載入中...</option>
+      </select>
+
+      <div class="device-switcher" title="切換閱讀與列印的版面配置">
+        <button type="button" id="devDesktop" class="device-btn active" onclick="setDeviceLayout('desktop')">🖥️ Desktop</button>
+        <button type="button" id="devTablet" class="device-btn" onclick="setDeviceLayout('tablet')">📱 Tablet</button>
+        <button type="button" id="devMobile" class="device-btn" onclick="setDeviceLayout('mobile')">📲 Mobile</button>
+      </div>
+    </div>
+
+    <div class="mode-switch">
+      <button type="button" id="btnViewMode" class="mode-btn active" onclick="setMode('view')">👁️ 閱讀模式</button>
+      <button type="button" id="btnEditMode" class="mode-btn inactive" onclick="requestEditMode()">🔒 管理模式</button>
+      <button type="button" class="mode-btn btn-new edit-control" onclick="openNewRundownModal()">📄 新增場次</button>
+      <button type="button" class="mode-btn btn-save edit-control" onclick="saveCurrentRundown()">💾 儲存至試算表</button>
+      <button type="button" class="mode-btn btn-del-rd edit-control" onclick="deleteCurrentRundown()">🗑️ 刪除場次</button>
+      <button type="button" class="mode-btn print-btn" onclick="printCurrentLayout()">🖨️ 列印</button>
+    </div>
+  </div>
+
+  <!-- 新增 / 複製場次彈出視窗 -->
+  <div id="newRundownModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>📄 建立新場次草稿</h3>
+      <p>請選擇要建立空白範本，或是直接複製某一場已儲存的 Rundown 內容：</p>
+      <select id="copySourceSelect" class="modal-select"></select>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeNewRundownModal()">取消</button>
+        <button type="button" class="btn-modal-confirm" onclick="confirmCreateNewRundown()">建立草稿</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="statusBanner" class="status-banner"></div>
+
+  <div class="main-wrapper">
+    <!-- 1. 活動基本資料 -->
+    <div class="container">
+      <div class="section-header">
+        <h2>📅 活動基本資料</h2>
+      </div>
+      <div class="event-info-grid">
+        <div class="event-field"><label>活動名稱：</label><input type="text" id="eventName" class="edit-control" placeholder="例如：聖誕福音晚會"><span id="viewEventName" class="event-view-val"></span></div>
+        <div class="event-field"><label>日期：</label><input type="date" id="eventDate" class="edit-control"><span id="viewEventDate" class="event-view-val"></span></div>
+        <div class="event-field"><label>時間：</label><input type="text" id="eventTime" class="edit-control" placeholder="例如：19:30 - 21:00"><span id="viewEventTime" class="event-view-val"></span></div>
+        <div class="event-field"><label>地點：</label><input type="text" id="eventLocation" class="edit-control" placeholder="例如：主堂"><span id="viewEventLocation" class="event-view-val"></span></div>
+      </div>
+    </div>
+
+    <!-- 2. 各崗位負責人列表 -->
+    <div class="container">
+      <div class="section-header">
+        <h2>📋 各崗位負責人列表</h2>
+        <button type="button" class="toggle-btn" id="toggleRolesBtn" onclick="toggleSection('rolesGridContainer', 'toggleRolesBtn')">收合 ▲</button>
+      </div>
+      <div class="roles-grid" id="rolesGridContainer">
+        <div class="role-item" data-role="大會總監"><label>大會總監</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="節目總監"><label>節目總監</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="音樂總監"><label>音樂總監</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="音樂編唱"><label>音樂編唱</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="現場音響"><label>現場音響</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="場務總監"><label>場務總監</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="宣傳總監"><label>宣傳總監</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="信息"><label>信息</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="司儀"><label>司儀</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="見證"><label>見證</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="海報製作"><label>海報製作</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="PPT收集"><label>PPT收集</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="電腦控制"><label>電腦控制</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="台前事務"><label>台前事務</label><input class="edit-control" type="text" placeholder="不包括音響"><span class="role-view-val"></span></div>
+        <div class="role-item" data-role="提示時間"><label>提示時間</label><input class="edit-control" type="text"><span class="role-view-val"></span></div>
+      </div>
+    </div>
+
+    <!-- 3. 樂隊樂器列表 (新增區塊) -->
+    <div class="container">
+      <div class="section-header">
+        <h2>🎸 樂隊樂器列表 (Band & Sound Channel)</h2>
+        <button type="button" class="toggle-btn" id="toggleBandBtn" onclick="toggleSection('bandSectionBody', 'toggleBandBtn')">收合 ▲</button>
+      </div>
+      <div id="bandSectionBody">
+        <div class="table-wrapper">
+          <table id="bandTable">
+            <thead>
+              <tr>
+                <th style="width: 8%;">序號</th>
+                <th style="width: 30%;">樂器 / 聲部</th>
+                <th style="width: 30%;">樂手</th>
+                <th style="width: 20%;">音響 Channel</th>
+                <th class="action-col" style="width: 12%;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="bandBody"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn edit-control" onclick="addBandRow()">➕ 新增樂器項目</button>
+      </div>
+    </div>
+
+    <!-- 4. 節目流程表 -->
+    <div class="container">
+      <div class="section-header">
+        <h2>⏱️ 節目流程表 (Rundown)</h2>
+      </div>
+      <div class="table-wrapper">
+        <table id="rundownTable">
+          <thead>
+            <tr>
+              <th style="width:5%;">序號</th>
+              <th style="width:8%;">時間</th>
+              <th style="width:6%;">分鐘</th>
+              <th style="width:19%;">名稱</th>
+              <th style="width:13%;">負責/分享/唱歌</th>
+              <th style="width:7%;">人聲無線咪</th>
+              <th style="width:7%;">歌手無線咪</th>
+              <th style="width:6%;">頭咪</th>
+              <th style="width:11%;">多媒體</th>
+              <th style="width:8%;">備註</th>
+              <th class="action-col" style="width:10%;">順序 / 操作</th>
+            </tr>
+          </thead>
+          <tbody id="rundownBody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2">總計分鐘</td>
+              <td id="totalMinutes">0</td>
+              <td colspan="7" class="text-left" style="color:#c0392b;font-size:13px;">
+                <span class="edit-control">提示：點擊「▲ / ▼」可上下調整項目順序並自動重算時間；修改完畢請點擊「儲存至試算表」。</span>
+              </td>
+              <td class="action-col"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <button type="button" class="btn edit-control" onclick="addRow()">➕ 新增流程項目</button>
+    </div>
+  </div>
+
+  <script>
     const ADMIN_PASSWORD = "1234"; // 管理員密碼
     let savedRundowns = [];
     let currentRundownId = "";
     let currentDeviceLayout = "desktop";
 
-    // ==================== 【關鍵修改】將前端請求指向 Google Apps Script Web App ====================
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby_HosbSbX33DwzNCu-vr7pkvnhLv_JN1WHX518fSlvT1EpmcBS-CnmkoXzgPiHWl3S1Q/exec";
-
-    function callGas(action, payload) {
-      showStatus('⏳ 正在與 Google 雲端通訊...');
-      
-      if (action === 'getAll') {
-        return fetch(GAS_WEB_APP_URL + "?action=getAll")
-          .then(response => response.json());
-      } else {
-        // 使用 POST 傳送資料
-        return fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          mode: 'cors', // 啟用 CORS
-          cache: 'no-cache',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ action: action, payload: payload })
-        })
-        .then(response => response.json());
-      }
-    }
-    // =========================================================================================
-
-    // 修改現有的載入與儲存函式來使用 callGas
-    function loadAllRundownsFromServer(selectIdAfterLoad) {
-      showStatus('⏳ 正在讀取試算表資料...');
-      callGas('getAll', null)
-        .then(list => {
-          document.getElementById('statusBanner').style.display = 'none';
-          savedRundowns = list || [];
-          renderSelectorDropdown(selectIdAfterLoad);
-        })
-        .catch(err => {
-          showStatus('❌ 讀取失敗：' + err.message);
-          populateForm(getDefaultTemplate());
-        });
-    }
-
-    function saveCurrentRundown() {
-      const payload = collectFormData();
-      if (!payload.eventName && !payload.eventDate) {
-        alert('請先填寫「活動名稱」或「日期」再儲存！');
-        return;
-      }
-      
-      showStatus('⏳ 正在儲存至 Google 試算表...');
-      callGas('save', payload)
-        .then(res => {
-          currentRundownId = res.id;
-          showStatus('✅ 儲存成功！');
-          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 3000);
-          loadAllRundownsFromServer(res.id);
-        })
-        .catch(err => {
-          showStatus('❌ 儲存失敗：' + err.message);
-        });
-    }
-
-    function deleteCurrentRundown() {
-      if (!currentRundownId) { alert('此場次尚未儲存，無需刪除。'); return; }
-      if (!confirm('確定要從 Google 試算表永久刪除此場次嗎？')) return;
-      
-      showStatus('⏳ 正在刪除...');
-      callGas('delete', { id: currentRundownId })
-        .then(() => {
-          showStatus('🗑️ 已刪除！');
-          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 2500);
-          loadAllRundownsFromServer();
-        })
-        .catch(err => { showStatus('❌ 刪除失敗：' + err.message); });
-    }
-
-    // ==================== 以下保持不變 ====================
-
+    // 切換 Desktop / Tablet / Mobile 閱讀與列印版面
     function setDeviceLayout(layout) {
       currentDeviceLayout = layout;
       const body = document.body;
@@ -105,6 +605,7 @@
       window.print();
     }
 
+    // 通用收合/展開區塊函式
     function toggleSection(containerId, btnId) {
       const el = document.getElementById(containerId);
       const btn = document.getElementById(btnId);
@@ -177,6 +678,26 @@
       const banner = document.getElementById('statusBanner');
       banner.innerText = msg;
       banner.style.display = 'block';
+    }
+
+    function loadAllRundownsFromServer(selectIdAfterLoad) {
+      showStatus('⏳ 正在讀取試算表資料...');
+      if (typeof google === 'undefined' || !google.script) {
+        document.getElementById('statusBanner').style.display = 'none';
+        renderSelectorDropdown();
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(list) {
+          document.getElementById('statusBanner').style.display = 'none';
+          savedRundowns = list || [];
+          renderSelectorDropdown(selectIdAfterLoad);
+        })
+        .withFailureHandler(function(err) {
+          showStatus('❌ 讀取失敗：' + err.message);
+          populateForm(getDefaultTemplate());
+        })
+        .getAllRundowns();
     }
 
     function renderSelectorDropdown(targetId) {
@@ -286,17 +807,20 @@
       document.getElementById('eventTime').value = data.eventTime || "";
       document.getElementById('eventLocation').value = data.eventLocation || "";
 
+      // 填入崗位
       document.querySelectorAll('.role-item').forEach(item => {
         const roleName = item.getAttribute('data-role');
         item.querySelector('input').value = (data.roles && data.roles[roleName]) ? data.roles[roleName] : "";
       });
 
+      // 填入樂隊樂器列表
       const bandBody = document.getElementById('bandBody');
       bandBody.innerHTML = '';
       const bandList = data.band || [];
       bandList.forEach(b => addBandRowWithData(b));
       updateBandNumbers();
 
+      // 填入節目流程表
       const tbody = document.getElementById('rundownBody');
       tbody.innerHTML = '';
       (data.rows || []).forEach(r => addRowWithData(r));
@@ -350,6 +874,40 @@
       };
     }
 
+    function saveCurrentRundown() {
+      const payload = collectFormData();
+      if (!payload.eventName && !payload.eventDate) {
+        alert('請先填寫「活動名稱」或「日期」再儲存！');
+        return;
+      }
+      showStatus('⏳ 正在儲存至 Google 試算表...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          currentRundownId = res.id;
+          showStatus('✅ 儲存成功！');
+          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 3000);
+          loadAllRundownsFromServer(res.id);
+        })
+        .withFailureHandler(function(err) {
+          showStatus('❌ 儲存失敗：' + err.message);
+        })
+        .saveRundownData(payload);
+    }
+
+    function deleteCurrentRundown() {
+      if (!currentRundownId) { alert('此場次尚未儲存，無需刪除。'); return; }
+      if (!confirm('確定要從 Google 試算表永久刪除此場次嗎？')) return;
+      showStatus('⏳ 正在刪除...');
+      google.script.run
+        .withSuccessHandler(function() {
+          showStatus('🗑️ 已刪除！');
+          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 2500);
+          loadAllRundownsFromServer();
+        })
+        .withFailureHandler(function(err) { showStatus('❌ 刪除失敗：' + err.message); })
+        .deleteRundownById(currentRundownId);
+    }
+
     function syncDataToView() {
       document.getElementById('viewEventName').innerText = document.getElementById('eventName').value || '—';
       document.getElementById('viewEventDate').innerText = document.getElementById('eventDate').value || '—';
@@ -360,6 +918,7 @@
         item.querySelector('.role-view-val').innerText = item.querySelector('input').value.trim() || '—';
       });
 
+      // 同步樂隊樂器表閱讀文字
       document.querySelectorAll('#bandBody tr').forEach(row => {
         const inputs = row.querySelectorAll('input');
         const spans = row.querySelectorAll('.view-text');
@@ -371,6 +930,7 @@
         }
       });
 
+      // 同步節目流程表閱讀文字
       document.querySelectorAll('#rundownBody tr').forEach(row => {
         row.querySelectorAll('td').forEach((cell, idx) => {
           if (idx === 0 || cell.classList.contains('action-col')) return;
@@ -404,7 +964,12 @@
       return `<span class="badge ${c}">${val}</span>`;
     }
 
-    function addBandRow() { addBandRowWithData({}); updateBandNumbers(); }
+    // ==================== 樂隊樂器列表操作與上下調動 ====================
+    function addBandRow() {
+      addBandRowWithData({});
+      updateBandNumbers();
+    }
+
     function addBandRowWithData(d) {
       const tbody = document.getElementById("bandBody");
       const r = tbody.insertRow(tbody.rows.length);
@@ -426,8 +991,11 @@
     function moveBandRow(btn, direction) {
       const row = btn.closest('tr');
       const tbody = row.parentNode;
-      if (direction === -1 && row.previousElementSibling) { tbody.insertBefore(row, row.previousElementSibling); }
-      else if (direction === 1 && row.nextElementSibling) { tbody.insertBefore(row.nextElementSibling, row); }
+      if (direction === -1 && row.previousElementSibling) {
+        tbody.insertBefore(row, row.previousElementSibling);
+      } else if (direction === 1 && row.nextElementSibling) {
+        tbody.insertBefore(row.nextElementSibling, row);
+      }
       updateBandNumbers();
     }
 
@@ -439,9 +1007,12 @@
 
     function updateBandNumbers() {
       const rows = document.getElementById("bandBody").rows;
-      for (let i = 0; i < rows.length; i++) { rows[i].querySelector('.band-num').innerText = i + 1; }
+      for (let i = 0; i < rows.length; i++) {
+        rows[i].querySelector('.band-num').innerText = i + 1;
+      }
     }
 
+    // ==================== 節目流程表時間推算、上下調動與操作 ====================
     function parseTimeToMinutes(str) {
       if (!str) return null;
       const p = str.trim().split(':');
@@ -508,15 +1079,19 @@
       `;
     }
 
+    // 上下調動節目流程項目，並自動重新排序與推算時間
     function moveRundownRow(btn, direction) {
       const row = btn.closest('tr');
       const tbody = row.parentNode;
       if (direction === -1 && row.previousElementSibling) {
+        // 若移動後變成第一行，將原本第一行的開始時間保留給新的第一行，方便連鎖計算
         const prevRow = row.previousElementSibling;
         if (!prevRow.previousElementSibling) {
           const firstTime = prevRow.querySelector('.time-input').value;
           const currentTime = row.querySelector('.time-input').value;
-          if (firstTime && !currentTime) { row.querySelector('.time-input').value = firstTime; }
+          if (firstTime && !currentTime) {
+            row.querySelector('.time-input').value = firstTime;
+          }
         }
         tbody.insertBefore(row, prevRow);
       } else if (direction === 1 && row.nextElementSibling) {
@@ -524,7 +1099,9 @@
         if (!row.previousElementSibling) {
           const firstTime = row.querySelector('.time-input').value;
           const nextTime = nextRow.querySelector('.time-input').value;
-          if (firstTime && !nextTime) { nextRow.querySelector('.time-input').value = firstTime; }
+          if (firstTime && !nextTime) {
+            nextRow.querySelector('.time-input').value = firstTime;
+          }
         }
         tbody.insertBefore(nextRow, row);
       }
@@ -541,14 +1118,18 @@
 
     function updateRowNumbers() {
       const rows = document.getElementById("rundownBody").rows;
-      for (let i = 0; i < rows.length; i++) { rows[i].querySelector('.row-num').innerText = i + 1; }
+      for (let i = 0; i < rows.length; i++) rows[i].querySelector('.row-num').innerText = i + 1;
     }
 
     function autoDetectDeviceLayout() {
       const w = window.innerWidth;
-      if (w <= 600) { setDeviceLayout('mobile'); }
-      else if (w <= 1024) { setDeviceLayout('tablet'); }
-      else { setDeviceLayout('desktop'); }
+      if (w <= 600) {
+        setDeviceLayout('mobile');
+      } else if (w <= 1024) {
+        setDeviceLayout('tablet');
+      } else {
+        setDeviceLayout('desktop');
+      }
     }
 
     window.onload = function() {
@@ -557,3 +1138,5 @@
       loadAllRundownsFromServer();
     };
   </script>
+</body>
+</html>
