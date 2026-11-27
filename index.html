@@ -406,6 +406,78 @@
         function handleCrewInput(id, field, value) { const item = crewData.find(i => i.id === id); if (item) item[field] = value; }
         function handleBandInput(id, field, value) { const item = bandData.find(i => i.id === id); if (item) item[field] = value; }
 
+        function renderTable() {
+            const tbody = document.getElementById('rundownBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            let currentStartTime = document.getElementById('startTime')?.value || "00:00";
+
+            rundownData.forEach((item, index) => {
+                const durationVal = parseInt(item.duration) || 0;
+                const endTime = addMinutesToTime(currentStartTime, durationVal);
+
+                const tr = document.createElement('tr');
+                tr.id = `row-${item.id}`;
+                tr.className = "hover:bg-slate-50 transition-colors group";
+
+                tr.innerHTML = `
+                    <td class="admin-only py-2 px-1 no-print text-center align-middle">
+                        <div class="flex flex-col items-center gap-0.5">
+                            <button type="button" onclick="moveRow(${index}, -1)" class="text-slate-400 hover:text-indigo-600 p-0.5 text-xs ${index === 0 ? 'opacity-25 pointer-events-none' : ''}" title="上移">
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </button>
+                            <button type="button" onclick="moveRow(${index}, 1)" class="text-slate-400 hover:text-indigo-600 p-0.5 text-xs ${index === rundownData.length - 1 ? 'opacity-25 pointer-events-none' : ''}" title="下移">
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="py-2 px-2 text-center font-mono text-sm text-slate-700 align-middle">
+                        <span class="start-time">${currentStartTime}</span>
+                    </td>
+                    <td class="py-2 px-2 text-center font-mono text-sm text-slate-500 align-middle">
+                        <span class="end-time">${endTime}</span>
+                    </td>
+                    <td class="py-2 px-2 text-center align-middle">
+                        <input type="number" min="0" class="table-input text-center font-mono font-semibold text-sm px-1" value="${durationVal}" oninput="handleInput('${item.id}', 'duration', this.value)">
+                    </td>
+                    <td class="py-2 px-2 align-middle">
+                        <textarea rows="1" class="table-textarea font-medium text-sm" oninput="autoResize(this); handleInput('${item.id}', 'activity', this.value)" placeholder="輸入環節內容...">${item.activity || ''}</textarea>
+                    </td>
+                    <td class="py-2 px-2 align-middle">
+                        <textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleInput('${item.id}', 'pic', this.value)" placeholder="負責人...">${item.pic || ''}</textarea>
+                    </td>
+                    <td class="py-2 px-1 align-middle">
+                        <input type="text" class="table-input text-center font-mono text-sm px-1" value="${item.vocalMic || ''}" oninput="handleInput('${item.id}', 'vocalMic', this.value)" placeholder="-">
+                    </td>
+                    <td class="py-2 px-1 align-middle">
+                        <input type="text" class="table-input text-center font-mono text-sm px-1" value="${item.singerMic || ''}" oninput="handleInput('${item.id}', 'singerMic', this.value)" placeholder="-">
+                    </td>
+                    <td class="py-2 px-1 align-middle">
+                        <input type="text" class="table-input text-center font-mono text-sm px-1" value="${item.headsetMic || ''}" oninput="handleInput('${item.id}', 'headsetMic', this.value)" placeholder="-">
+                    </td>
+                    <td class="py-2 px-2 align-middle">
+                        <textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleInput('${item.id}', 'multimedia', this.value)" placeholder="多媒體需求...">${item.multimedia || ''}</textarea>
+                    </td>
+                    <td class="py-2 px-2 align-middle">
+                        <textarea rows="1" class="table-textarea text-sm text-slate-600" oninput="autoResize(this); handleInput('${item.id}', 'remarks', this.value)" placeholder="備註...">${item.remarks || ''}</textarea>
+                    </td>
+                    <td class="admin-only py-2 px-1 no-print text-center align-middle">
+                        <button type="button" onclick="deleteRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors p-1" title="刪除環節">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+                currentStartTime = endTime;
+            });
+
+            setTimeout(() => {
+                document.querySelectorAll('#rundownTable .table-textarea').forEach(el => autoResize(el));
+            }, 10);
+        }
+
         function renderCrewTable() {
             const tbody = document.getElementById('crewBody'); tbody.innerHTML = '';
             crewData.forEach((item) => {
