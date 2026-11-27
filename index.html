@@ -1,4 +1,630 @@
 <!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專業活動流程表 (Rundown) 製作工具</title>
+    <!-- 引入 Tailwind CSS 進行美化 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google 字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* 列印時的樣式優化 */
+        @media print {
+            body { background-color: #fff; }
+            .no-print { display: none !important; }
+            .print-full-width { width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+            input, textarea { border: none !important; background: transparent !important; resize: none; overflow: hidden; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; }
+            .shadow-lg { box-shadow: none !important; }
+        }
+        /* 隱藏原生滾動條但保持可滾動 */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 表格輸入框樣式 */
+        .table-input {
+            width: 100%;
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 0.375rem 0.5rem;
+            border-radius: 0.25rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .table-input:hover { border-color: #e2e8f0; background: #f1f5f9; }
+        .table-input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        
+        /* 管理員與唯讀模式樣式 */
+        body:not(.admin-mode) .admin-only { display: none !important; }
+        body:not(.admin-mode) .guest-readonly {
+            pointer-events: none;
+            border-color: transparent !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            color: #334155;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        body:not(.admin-mode) .table-input {
+            pointer-events: none;
+            border-color: transparent !important;
+            background: transparent !important;
+            color: #334155;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- 導覽列 -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-clipboard-list text-2xl"></i>
+                <h1 class="text-xl font-bold tracking-wider">RUNDOWN MAKER</h1>
+                <span id="modeBadge" class="text-xs font-semibold px-2 py-1 rounded bg-slate-500 text-white ml-2">唯讀模式</span>
+            </div>
+            <div class="flex gap-3">
+                <button id="loginBtn" onclick="openLoginModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded shadow transition text-sm font-medium">
+                    <i class="fa-solid fa-lock mr-2"></i>管理員登入
+                </button>
+                <button id="logoutBtn" onclick="logout()" class="hidden bg-rose-500 hover:bg-rose-400 px-4 py-2 rounded shadow transition text-sm font-medium">
+                    <i class="fa-solid fa-unlock mr-2"></i>登出
+                </button>
+                <button onclick="openHistoryModal()" class="bg-amber-500 hover:bg-amber-400 px-4 py-2 rounded shadow transition text-sm font-medium">
+                    <i class="fa-solid fa-folder-open mr-2"></i>載入紀錄
+                </button>
+                <button onclick="exportCSV()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded shadow transition text-sm font-medium">
+                    <i class="fa-solid fa-file-csv mr-2"></i>匯出 CSV
+                </button>
+                <button onclick="window.print()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded shadow transition text-sm font-medium">
+                    <i class="fa-solid fa-print mr-2"></i>列印 / PDF
+                </button>
+                <button onclick="saveToCloud()" class="admin-only bg-teal-500 hover:bg-teal-400 px-4 py-2 rounded shadow transition text-sm font-medium">
+                    <i class="fa-solid fa-cloud-arrow-up mr-2"></i>儲存至雲端
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full print-full-width">
+        
+        <!-- 活動基本資訊卡片 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border border-slate-100">
+            <h2 class="text-lg font-bold mb-4 text-indigo-700 border-b pb-2"><i class="fa-regular fa-calendar-check mr-2"></i>活動基本資訊</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="col-span-1 md:col-span-2">
+                    <label class="block text-sm font-medium text-slate-500 mb-1">活動名稱</label>
+                    <input type="text" id="eventName" value="2027 年度大會流程表" class="guest-readonly w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-500 mb-1">活動日期</label>
+                    <input type="date" id="eventDate" class="guest-readonly w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-500 mb-1">開始時間 (HH:MM)</label>
+                    <input type="time" id="startTime" value="09:00" onchange="updateAllTimes()" class="guest-readonly w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition font-mono">
+                </div>
+            </div>
+        </div>
+
+        <!-- 各崗位負責人區塊 -->
+        <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col mb-6 print:break-inside-avoid">
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
+                <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-users mr-2"></i>各崗位負責人</h2>
+                <button onclick="addCrewRow()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg shadow transition text-sm font-medium flex items-center">
+                    <i class="fa-solid fa-plus mr-2"></i>新增崗位
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse" id="crewTable">
+                    <thead class="bg-slate-100 shadow-sm">
+                        <tr>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">崗位 (Role)</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">姓名 (Name)</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-2/4">聯絡方式 / 備註 (Contact & Remarks)</th>
+                            <th class="admin-only py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">刪除</th>
+                        </tr>
+                    </thead>
+                    <tbody id="crewBody" class="divide-y divide-slate-200 bg-white">
+                        <!-- 動態生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 樂隊樂器列表區塊 -->
+        <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col mb-6 print:break-inside-avoid">
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
+                <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-sliders mr-2"></i>樂隊與音響清單 (Band & Sound Channel)</h2>
+                <button onclick="addBandRow()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg shadow transition text-sm font-medium flex items-center">
+                    <i class="fa-solid fa-plus mr-2"></i>新增 Channel
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse" id="bandTable">
+                    <thead class="bg-slate-100 shadow-sm">
+                        <tr>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center">CH</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">樂器 / 輸入 (Input)</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">收音方式 / 麥克風 (Mic/DI)</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/5">樂手 (Musician)</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/5">備註 (Remarks)</th>
+                            <th class="admin-only py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">刪除</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bandBody" class="divide-y divide-slate-200 bg-white">
+                        <!-- 動態生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 流程表區塊 -->
+        <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col h-[600px] print:h-auto">
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
+                <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-list-ol mr-2"></i>流程明細</h2>
+                <button onclick="addRow()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow transition text-sm font-medium flex items-center">
+                    <i class="fa-solid fa-plus mr-2"></i>新增環節
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto overflow-y-auto flex-grow hide-scrollbar p-0 m-0 print:overflow-visible">
+                <table class="w-full text-left border-collapse" id="rundownTable">
+                    <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm print:static">
+                        <tr>
+                            <th class="admin-only py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">操作</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">開始</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">結束</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24 text-center">時長(分)</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[200px]">環節內容 (Activity)</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">負責人 (PIC)</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[150px]">備註 (Remarks)</th>
+                            <th class="admin-only py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">刪除</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rundownBody" class="divide-y divide-slate-200 bg-white">
+                        <!-- 動態生成列 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </main>
+
+    <!-- 登入 Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 max-w-sm flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-lock mr-2 text-indigo-600"></i>管理員登入</h3>
+                <button onclick="closeLoginModal()" class="text-slate-400 hover:text-rose-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-500 mb-4">請輸入管理員密碼以啟用編輯、新增、刪除與雲端存檔功能。</p>
+                <input type="password" id="adminPassword" placeholder="請輸入密碼 (預設: 1234)" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4" onkeypress="if(event.key === 'Enter') verifyPassword()">
+                <button onclick="verifyPassword()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition-colors">
+                    登入解鎖
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 歷史紀錄 Modal (預設隱藏) -->
+    <div id="historyModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-cloud-arrow-down mr-2 text-indigo-600"></i>雲端紀錄列表</h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-rose-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow bg-slate-100/50" id="historyListContainer">
+                <!-- 讀取中狀態 -->
+                <div id="historyLoading" class="text-center py-8">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-500 mb-4"></i>
+                    <p class="text-slate-500 font-medium mt-2">正在從雲端讀取紀錄...</p>
+                    <p class="text-xs text-slate-400 mt-1">(使用 JSONP 繞過 CORS 限制)</p>
+                </div>
+                <!-- 紀錄列表容器 -->
+                <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                    <!-- 動態生成紀錄卡片 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示框容器 -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        // ---------------------------------------------------
+        // 1. 狀態管理 (State Management)
+        // ---------------------------------------------------
+        
+        let isAdmin = false;
+        const ADMIN_PW = "1234"; // ★ 你可以在這裡更改管理員預設密碼
+
+        let rundownData = [
+            { id: generateId(), duration: 30, activity: '嘉賓入場及報到', pic: '接待組', remarks: '播放背景音樂，準備簽到表' },
+            { id: generateId(), duration: 10, activity: '主持人開場', pic: 'MC', remarks: '介紹今日活動目的及來賓' },
+            { id: generateId(), duration: 20, activity: '長官致詞', pic: '總經理', remarks: '準備講台與麥克風' },
+            { id: generateId(), duration: 15, activity: '中場休息 (Coffee Break)', pic: '場務組', remarks: '引導至茶水區' }
+        ];
+
+        let crewData = [
+            { id: generateId(), role: '活動總召', name: '', contact: '' },
+            { id: generateId(), role: '舞台監督', name: '', contact: '' },
+            { id: generateId(), role: '音響控制', name: '', contact: '' }
+        ];
+
+        let bandData = [
+            { id: generateId(), ch: '1', input: 'Vocal 1', mic: '無線麥克風', musician: '主唱', remarks: 'Center' },
+            { id: generateId(), ch: '2', input: 'A.Guitar', mic: 'DI Box', musician: '吉他手', remarks: 'Stage Right' }
+        ];
+
+        // 🔥 更新為最新拿到的 GAS 網址！
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_HosbSbX33DwzNCu-vr7pkvnhLv_JN1WHX518fSlvT1EpmcBS-CnmkoXzgPiHWl3S1Q/exec";
+
+        // ---------------------------------------------------
+        // 2. 工具函數 (Utility Functions)
+        // ---------------------------------------------------
+        
+        function generateId() { return Math.random().toString(36).substr(2, 9); }
+
+        function addMinutesToTime(timeStr, minutesToAdd) {
+            if (!timeStr) return "00:00";
+            let [hours, minutes] = timeStr.split(':').map(Number);
+            let date = new Date();
+            date.setHours(hours, minutes, 0, 0);
+            date.setMinutes(date.getMinutes() + parseInt(minutesToAdd || 0));
+            return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            let bgColor = type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-rose-500' : type === 'warning' ? 'bg-amber-500' : 'bg-blue-600';
+            let icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info';
+            
+            toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 transform transition-all duration-300 translate-y-10 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span class="font-medium">${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+            setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        // ---------------------------------------------------
+        // 3. 核心邏輯 (Core Logic)
+        // ---------------------------------------------------
+
+        function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); setTimeout(() => document.getElementById('adminPassword').focus(), 100); }
+        function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); document.getElementById('adminPassword').value = ''; }
+        
+        function verifyPassword() {
+            if (document.getElementById('adminPassword').value === ADMIN_PW) {
+                isAdmin = true;
+                document.body.classList.add('admin-mode');
+                document.getElementById('loginBtn').classList.add('hidden');
+                document.getElementById('logoutBtn').classList.remove('hidden');
+                const badge = document.getElementById('modeBadge');
+                badge.textContent = '管理員模式'; badge.classList.replace('bg-slate-500', 'bg-emerald-500');
+                showToast('已切換為管理員模式，解鎖所有功能', 'success');
+                closeLoginModal();
+            } else {
+                showToast('密碼錯誤', 'error');
+            }
+        }
+
+        function logout() {
+            isAdmin = false;
+            document.body.classList.remove('admin-mode');
+            document.getElementById('loginBtn').classList.remove('hidden');
+            document.getElementById('logoutBtn').classList.add('hidden');
+            const badge = document.getElementById('modeBadge');
+            badge.textContent = '唯讀模式'; badge.classList.replace('bg-emerald-500', 'bg-slate-500');
+            showToast('已登出，目前為唯讀模式', 'info');
+        }
+
+        function updateAllTimes() {
+            let currentStartTime = document.getElementById('startTime').value || "00:00";
+            rundownData.forEach((item) => {
+                let endTime = addMinutesToTime(currentStartTime, parseInt(item.duration) || 0);
+                const row = document.getElementById(`row-${item.id}`);
+                if (row) {
+                    row.querySelector('.start-time').textContent = currentStartTime;
+                    row.querySelector('.end-time').textContent = endTime;
+                }
+                currentStartTime = endTime;
+            });
+        }
+
+        function handleInput(id, field, value) {
+            const item = rundownData.find(i => i.id === id);
+            if (item) {
+                if (field === 'duration') {
+                    value = parseInt(value);
+                    item.duration = (isNaN(value) || value < 0) ? 0 : value;
+                    updateAllTimes();
+                } else item[field] = value;
+            }
+        }
+
+        function handleCrewInput(id, field, value) { const item = crewData.find(i => i.id === id); if (item) item[field] = value; }
+        function handleBandInput(id, field, value) { const item = bandData.find(i => i.id === id); if (item) item[field] = value; }
+
+        function renderCrewTable() {
+            const tbody = document.getElementById('crewBody'); tbody.innerHTML = '';
+            crewData.forEach((item) => {
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
+                tr.innerHTML = `
+                    <td class="py-1 px-4"><input type="text" class="table-input font-medium" value="${item.role}" oninput="handleCrewInput('${item.id}', 'role', this.value)" placeholder="輸入崗位..."></td>
+                    <td class="py-1 px-4"><input type="text" class="table-input" value="${item.name}" oninput="handleCrewInput('${item.id}', 'name', this.value)" placeholder="輸入姓名..."></td>
+                    <td class="py-1 px-4"><input type="text" class="table-input text-slate-500" value="${item.contact}" oninput="handleCrewInput('${item.id}', 'contact', this.value)" placeholder="輸入聯絡方式或備註..."></td>
+                    <td class="admin-only py-1 px-4 no-print text-center"><button onclick="deleteCrewRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
+                `; tbody.appendChild(tr);
+            });
+        }
+
+        function addCrewRow() { crewData.push({ id: generateId(), role: '', name: '', contact: '' }); renderCrewTable(); }
+        function deleteCrewRow(id) { crewData = crewData.filter(item => item.id !== id); renderCrewTable(); }
+
+        function renderBandTable() {
+            const tbody = document.getElementById('bandBody'); tbody.innerHTML = '';
+            bandData.forEach((item) => {
+                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
+                tr.innerHTML = `
+                    <td class="py-1 px-4"><input type="text" class="table-input text-center font-mono font-bold" value="${item.ch}" oninput="handleBandInput('${item.id}', 'ch', this.value)" placeholder="CH"></td>
+                    <td class="py-1 px-4"><input type="text" class="table-input font-medium" value="${item.input}" oninput="handleBandInput('${item.id}', 'input', this.value)" placeholder="樂器/輸入..."></td>
+                    <td class="py-1 px-4"><input type="text" class="table-input" value="${item.mic}" oninput="handleBandInput('${item.id}', 'mic', this.value)" placeholder="收音方式/麥克風..."></td>
+                    <td class="py-1 px-4"><input type="text" class="table-input" value="${item.musician}" oninput="handleBandInput('${item.id}', 'musician', this.value)" placeholder="樂手姓名..."></td>
+                    <td class="py-1 px-4"><input type="text" class="table-input text-slate-500" value="${item.remarks}" oninput="handleBandInput('${item.id}', 'remarks', this.value)" placeholder="備註..."></td>
+                    <td class="admin-only py-1 px-4 no-print text-center"><button onclick="deleteBandRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
+                `; tbody.appendChild(tr);
+            });
+        }
+
+        function addBandRow() {
+            let nextCh = bandData.length > 0 ? (parseInt(bandData[bandData.length-1].ch) || bandData.length) + 1 : 1;
+            bandData.push({ id: generateId(), ch: nextCh.toString(), input: '', mic: '', musician: '', remarks: '' }); renderBandTable();
+        }
+        function deleteBandRow(id) { bandData = bandData.filter(item => item.id !== id); renderBandTable(); }
+
+        function renderTable() {
+            const tbody = document.getElementById('rundownBody'); tbody.innerHTML = '';
+            let currentStartTime = document.getElementById('startTime').value || "00:00";
+            rundownData.forEach((item, index) => {
+                let endTime = addMinutesToTime(currentStartTime, item.duration);
+                const tr = document.createElement('tr'); tr.id = `row-${item.id}`; tr.className = "hover:bg-slate-50 transition-colors group";
+                tr.innerHTML = `
+                    <td class="admin-only py-2 px-4 no-print text-center"><div class="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                        <button onclick="moveRow(${index}, -1)" class="text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-chevron-up"></i></button>
+                        <button onclick="moveRow(${index}, 1)" class="text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-chevron-down"></i></button>
+                    </div></td>
+                    <td class="py-2 px-4 text-sm font-mono font-medium text-slate-700 start-time">${currentStartTime}</td>
+                    <td class="py-2 px-4 text-sm font-mono font-medium text-slate-500 end-time">${endTime}</td>
+                    <td class="py-2 px-4 text-center"><input type="number" min="0" class="table-input text-center font-mono" value="${item.duration}" onchange="handleInput('${item.id}', 'duration', this.value)"></td>
+                    <td class="py-2 px-4"><input type="text" class="table-input font-medium" value="${item.activity}" oninput="handleInput('${item.id}', 'activity', this.value)" placeholder="輸入環節名稱..."></td>
+                    <td class="py-2 px-4"><input type="text" class="table-input text-sm" value="${item.pic}" oninput="handleInput('${item.id}', 'pic', this.value)" placeholder="負責人..."></td>
+                    <td class="py-2 px-4"><input type="text" class="table-input text-sm text-slate-500" value="${item.remarks}" oninput="handleInput('${item.id}', 'remarks', this.value)" placeholder="備註事項..."></td>
+                    <td class="admin-only py-2 px-4 no-print text-center"><button onclick="deleteRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
+                `; tbody.appendChild(tr); currentStartTime = endTime;
+            });
+        }
+
+        function addRow() { rundownData.push({ id: generateId(), duration: 10, activity: '', pic: '', remarks: '' }); renderTable(); setTimeout(() => { const c = document.querySelector('.overflow-y-auto'); c.scrollTop = c.scrollHeight; }, 50); }
+        function deleteRow(id) { if (rundownData.length <= 1) return showToast('流程表至少需保留一環節', 'warning'); rundownData = rundownData.filter(item => item.id !== id); renderTable(); }
+        function moveRow(index, direction) { if (index + direction < 0 || index + direction >= rundownData.length) return; const temp = rundownData[index]; rundownData[index] = rundownData[index + direction]; rundownData[index + direction] = temp; renderTable(); }
+
+        // ---------------------------------------------------
+        // 4. 匯出與儲存功能 (Export & Save)
+        // ---------------------------------------------------
+
+        function exportCSV() {
+            let csv = "data:text/csv;charset=utf-8,\uFEFF" + `活動名稱:,${document.getElementById('eventName').value}\n活動日期:,${document.getElementById('eventDate').value}\n\n各崗位負責人\n崗位,姓名,聯絡方式/備註\n`;
+            crewData.forEach(i => csv += `"${i.role}","${i.name}","${i.contact}"\n`);
+            csv += `\n樂隊與音響清單\nCH,樂器/輸入,收音方式/麥克風,樂手,備註\n`;
+            bandData.forEach(i => csv += `"${i.ch}","${i.input}","${i.mic}","${i.musician}","${i.remarks}"\n`);
+            csv += "\n流程表\n開始時間,結束時間,時長(分鐘),環節內容,負責人,備註\n";
+            let start = document.getElementById('startTime').value;
+            rundownData.forEach(i => { let end = addMinutesToTime(start, i.duration); csv += `${start},${end},${i.duration},"${i.activity}","${i.pic}","${i.remarks}"\n`; start = end; });
+            const link = document.createElement("a"); link.href = encodeURI(csv); link.download = "流程表.csv"; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        function saveToCloud() {
+            if (!isAdmin) return showToast('無權限儲存，請先登入管理員', 'error');
+            const btn = event.currentTarget; const orig = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>儲存中...`; btn.disabled = true; btn.classList.add('opacity-75');
+
+            const payload = {
+                eventName: document.getElementById('eventName').value, eventDate: document.getElementById('eventDate').value, startTime: document.getElementById('startTime').value,
+                crew: crewData, band: bandData, rundown: rundownData, timestamp: new Date().toISOString()
+            };
+
+            try { let lh = JSON.parse(localStorage.getItem('rundown_history') || '[]'); lh.push(payload); localStorage.setItem('rundown_history', JSON.stringify(lh)); } catch(e){}
+
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+            .then(() => showToast('已發送資料至雲端！', 'success'))
+            .catch(() => showToast('儲存失敗', 'error'))
+            .finally(() => { btn.innerHTML = orig; btn.disabled = false; btn.classList.remove('opacity-75'); });
+        }
+
+        // ---------------------------------------------------
+        // 6. 雲端紀錄讀取 (Load History) - JSONP 繞過 CORS
+        // ---------------------------------------------------
+
+        function openHistoryModal() {
+            document.getElementById('historyModal').classList.remove('hidden');
+            fetchCloudHistory();
+        }
+
+        function closeHistoryModal() { document.getElementById('historyModal').classList.add('hidden'); }
+
+        function fetchCloudHistory() {
+            const loading = document.getElementById('historyLoading');
+            const listContainer = document.getElementById('historyList');
+            loading.classList.remove('hidden'); listContainer.classList.add('hidden'); listContainer.innerHTML = '';
+
+            // 1. 建立一個唯一的 Callback 函數名稱
+            const callbackName = 'gasJSONP_' + Math.round(100000 * Math.random());
+            
+            // 2. 將函數掛載到 window 供外部腳本呼叫
+            window[callbackName] = function(data) {
+                // 資料成功取回，清除 Script tag 與 Callback 函數
+                cleanupJSONP(callbackName);
+                loading.classList.add('hidden');
+                
+                if (!data || data.length === 0) {
+                    listContainer.classList.remove('hidden');
+                    listContainer.innerHTML = '<div class="col-span-full text-center py-8 text-slate-500">雲端目前沒有儲存的紀錄。</div>';
+                    return;
+                }
+                
+                renderHistoryList(data, false); // 渲染雲端資料
+            };
+
+            // 3. 動態建立 Script Tag 發送 GET 請求
+            const script = document.createElement('script');
+            script.src = `${GOOGLE_SCRIPT_URL}?action=get&callback=${callbackName}`;
+            script.id = callbackName;
+            
+            // 4. 錯誤處理 (如果載入失敗)
+            script.onerror = () => {
+                cleanupJSONP(callbackName);
+                fallbackToLocal();
+            };
+
+            document.body.appendChild(script);
+
+            // 5. 設定 8 秒超時機制
+            setTimeout(() => {
+                if(window[callbackName]) {
+                    cleanupJSONP(callbackName);
+                    fallbackToLocal();
+                }
+            }, 8000);
+        }
+
+        function cleanupJSONP(callbackName) {
+            const scriptTag = document.getElementById(callbackName);
+            if (scriptTag) scriptTag.remove();
+            delete window[callbackName];
+        }
+
+        function renderHistoryList(data, isLocal) {
+            const listContainer = document.getElementById('historyList');
+            listContainer.classList.remove('hidden');
+            
+            data.reverse().forEach(record => {
+                const dateStr = new Date(record.timestamp).toLocaleString('zh-TW');
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow flex flex-col justify-between h-full";
+                
+                const typeHTML = isLocal 
+                    ? `<p class="text-xs text-amber-600 mb-4"><i class="fa-solid fa-hard-drive mr-1"></i>本機備份: ${dateStr}</p>`
+                    : `<p class="text-xs text-slate-400 mb-4"><i class="fa-regular fa-cloud mr-1"></i>雲端紀錄: ${dateStr}</p>`;
+
+                card.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-lg text-indigo-700 mb-1">${record.eventName || '未命名活動'}</h4>
+                        <p class="text-sm text-slate-600 mb-1"><i class="fa-regular fa-calendar mr-1"></i>活動日期: ${record.eventDate || '未設定'}</p>
+                        ${typeHTML}
+                    </div>
+                    <button class="load-btn w-full bg-slate-100 hover:bg-indigo-50 text-indigo-600 font-medium py-2 rounded transition-colors text-sm border border-slate-200 hover:border-indigo-300">
+                        載入此紀錄
+                    </button>
+                `;
+                card.querySelector('.load-btn').addEventListener('click', () => loadRecordData(record));
+                listContainer.appendChild(card);
+            });
+        }
+
+        function fallbackToLocal() {
+            const loading = document.getElementById('historyLoading');
+            const listContainer = document.getElementById('historyList');
+            loading.classList.add('hidden');
+            
+            let localHistory = [];
+            try { localHistory = JSON.parse(localStorage.getItem('rundown_history') || '[]'); } catch(e) {}
+
+            if (localHistory.length > 0) {
+                listContainer.classList.remove('hidden');
+                const warningMsg = document.createElement('div');
+                warningMsg.className = "col-span-full mb-4 p-3 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 text-sm flex items-start gap-2";
+                warningMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mt-0.5"></i> <div><b>雲端連線逾時</b><br>已自動切換顯示「本機端備份」。若您剛更新了 GAS 程式碼，請確認有選擇「建立新版本」。</div>';
+                listContainer.appendChild(warningMsg);
+                renderHistoryList(localHistory, true);
+            } else {
+                listContainer.classList.remove('hidden');
+                listContainer.innerHTML = `
+                    <div class="col-span-full text-center py-6 bg-rose-50 rounded border border-rose-100">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500 text-3xl mb-2"></i>
+                        <p class="text-rose-700 font-medium mb-2">無法連線至 GAS 且無本機備份</p>
+                    </div>`;
+            }
+        }
+
+        function loadRecordData(record) {
+            // 💡 移除 confirm()，因為在沙盒預覽環境下會被瀏覽器強制阻擋導致程式中斷
+            
+            try {
+                // 1. 基本資訊安全賦值 (使用 || 確保不會賦予 undefined 導致報錯)
+                document.getElementById('eventName').value = record.eventName || ''; 
+                document.getElementById('eventDate').value = record.eventDate || ''; 
+                document.getElementById('startTime').value = record.startTime || '09:00';
+                
+                // 2. 嚴謹解析陣列資料 (處理可能的字串化、null、undefined 或非陣列型態)
+                let parsedCrew = [];
+                let parsedBand = [];
+                let parsedRundown = [];
+
+                if (typeof record.crew === 'string') { try { parsedCrew = JSON.parse(record.crew) || []; } catch(e){} }
+                else if (Array.isArray(record.crew)) { parsedCrew = record.crew; }
+
+                if (typeof record.band === 'string') { try { parsedBand = JSON.parse(record.band) || []; } catch(e){} }
+                else if (Array.isArray(record.band)) { parsedBand = record.band; }
+
+                if (typeof record.rundown === 'string') { try { parsedRundown = JSON.parse(record.rundown) || []; } catch(e){} }
+                else if (Array.isArray(record.rundown)) { parsedRundown = record.rundown; }
+
+                // 3. 確保變數一定是陣列，然後重新賦予 ID
+                crewData = Array.isArray(parsedCrew) ? parsedCrew.map(item => ({...(item || {}), id: generateId()})) : [];
+                bandData = Array.isArray(parsedBand) ? parsedBand.map(item => ({...(item || {}), id: generateId()})) : [];
+                rundownData = Array.isArray(parsedRundown) ? parsedRundown.map(item => ({...(item || {}), id: generateId()})) : [];
+                
+                // 4. 空陣列防呆 (確保畫面至少有一行輸入框，避免版面異常)
+                if (crewData.length === 0) crewData.push({ id: generateId(), role: '', name: '', contact: '' });
+                if (rundownData.length === 0) rundownData.push({ id: generateId(), duration: 10, activity: '', pic: '', remarks: '' }); 
+                
+                // 5. 強制重新渲染三個表格
+                renderCrewTable(); 
+                renderBandTable(); 
+                renderTable(); 
+                
+                // 6. 成功收尾
+                closeHistoryModal(); 
+                showToast('紀錄載入成功！', 'success');
+            } catch (e) {
+                console.error("解析紀錄時發生未預期錯誤:", e);
+                showToast('資料格式異常，部分內容可能無法載入', 'warning');
+            }
+        }
+
+        window.onload = () => { document.getElementById('eventDate').valueAsDate = new Date(); renderCrewTable(); renderBandTable(); renderTable(); };
+    </script>
+</body>
+</html><!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
