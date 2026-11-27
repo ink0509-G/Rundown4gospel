@@ -1,0 +1,559 @@
+<script>
+    const ADMIN_PASSWORD = "1234"; // 管理員密碼
+    let savedRundowns = [];
+    let currentRundownId = "";
+    let currentDeviceLayout = "desktop";
+
+    // ==================== 【關鍵修改】將前端請求指向 Google Apps Script Web App ====================
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby_HosbSbX33DwzNCu-vr7pkvnhLv_JN1WHX518fSlvT1EpmcBS-CnmkoXzgPiHWl3S1Q/exec";
+
+    function callGas(action, payload) {
+      showStatus('⏳ 正在與 Google 雲端通訊...');
+      
+      if (action === 'getAll') {
+        return fetch(GAS_WEB_APP_URL + "?action=getAll")
+          .then(response => response.json());
+      } else {
+        // 使用 POST 傳送資料
+        return fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          mode: 'cors', // 啟用 CORS
+          cache: 'no-cache',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ action: action, payload: payload })
+        })
+        .then(response => response.json());
+      }
+    }
+    // =========================================================================================
+
+    // 修改現有的載入與儲存函式來使用 callGas
+    function loadAllRundownsFromServer(selectIdAfterLoad) {
+      showStatus('⏳ 正在讀取試算表資料...');
+      callGas('getAll', null)
+        .then(list => {
+          document.getElementById('statusBanner').style.display = 'none';
+          savedRundowns = list || [];
+          renderSelectorDropdown(selectIdAfterLoad);
+        })
+        .catch(err => {
+          showStatus('❌ 讀取失敗：' + err.message);
+          populateForm(getDefaultTemplate());
+        });
+    }
+
+    function saveCurrentRundown() {
+      const payload = collectFormData();
+      if (!payload.eventName && !payload.eventDate) {
+        alert('請先填寫「活動名稱」或「日期」再儲存！');
+        return;
+      }
+      
+      showStatus('⏳ 正在儲存至 Google 試算表...');
+      callGas('save', payload)
+        .then(res => {
+          currentRundownId = res.id;
+          showStatus('✅ 儲存成功！');
+          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 3000);
+          loadAllRundownsFromServer(res.id);
+        })
+        .catch(err => {
+          showStatus('❌ 儲存失敗：' + err.message);
+        });
+    }
+
+    function deleteCurrentRundown() {
+      if (!currentRundownId) { alert('此場次尚未儲存，無需刪除。'); return; }
+      if (!confirm('確定要從 Google 試算表永久刪除此場次嗎？')) return;
+      
+      showStatus('⏳ 正在刪除...');
+      callGas('delete', { id: currentRundownId })
+        .then(() => {
+          showStatus('🗑️ 已刪除！');
+          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 2500);
+          loadAllRundownsFromServer();
+        })
+        .catch(err => { showStatus('❌ 刪除失敗：' + err.message); });
+    }
+
+    // ==================== 以下保持不變 ====================
+
+    function setDeviceLayout(layout) {
+      currentDeviceLayout = layout;
+      const body = document.body;
+      body.classList.remove('layout-desktop', 'layout-tablet', 'layout-mobile');
+      body.classList.add('layout-' + layout);
+
+      document.getElementById('devDesktop').classList.toggle('active', layout === 'desktop');
+      document.getElementById('devTablet').classList.toggle('active', layout === 'tablet');
+      document.getElementById('devMobile').classList.toggle('active', layout === 'mobile');
+
+      const printStyle = document.getElementById('dynamicPrintStyle');
+      if (layout === 'desktop') {
+        printStyle.innerHTML = '@page { size: A4 landscape; margin: 10mm; }';
+      } else {
+        printStyle.innerHTML = '@page { size: A4 portrait; margin: 10mm; }';
+      }
+    }
+
+    function printCurrentLayout() {
+      if (document.body.classList.contains('edit-mode')) {
+        setMode('view');
+      }
+      window.print();
+    }
+
+    function toggleSection(containerId, btnId) {
+      const el = document.getElementById(containerId);
+      const btn = document.getElementById(btnId);
+      if (el.style.display === 'none') {
+        el.style.display = (containerId === 'rolesGridContainer') ? 'grid' : 'block';
+        btn.innerText = '收合 ▲';
+      } else {
+        el.style.display = 'none';
+        btn.innerText = '展開 ▼';
+      }
+    }
+
+    function requestEditMode() {
+      if (document.body.classList.contains('edit-mode')) return;
+      const pwd = prompt("請輸入管理員密碼（預設為 1234）：");
+      if (pwd === null) return;
+      if (pwd === ADMIN_PASSWORD) {
+        setMode('edit');
+      } else {
+        alert("密碼錯誤，無法進入管理模式！");
+      }
+    }
+
+    function setMode(mode) {
+      const body = document.body;
+      const btnEdit = document.getElementById('btnEditMode');
+      const btnView = document.getElementById('btnViewMode');
+      if (mode === 'view') {
+        syncDataToView();
+        body.classList.remove('edit-mode');
+        body.classList.add('view-mode');
+        btnView.className = 'mode-btn active';
+        btnEdit.className = 'mode-btn inactive';
+        btnEdit.innerText = '🔒 管理模式';
+      } else {
+        body.classList.remove('view-mode');
+        body.classList.add('edit-mode');
+        btnEdit.className = 'mode-btn active';
+        btnEdit.innerText = '🔓 管理模式';
+        btnView.className = 'mode-btn inactive';
+      }
+    }
+
+    function getDefaultTemplate() {
+      const today = new Date().toISOString().split('T')[0];
+      return {
+        id: "",
+        eventName: "福音聚會",
+        eventDate: today,
+        eventTime: "19:30 - 21:00",
+        eventLocation: "主堂",
+        roles: {},
+        band: [
+          { instrument: "Keyboard / 鋼琴", player: "", channel: "CH 1-2" },
+          { instrument: "木結他 (Acoustic Guitar)", player: "", channel: "CH 3" },
+          { instrument: "電結他 (Electric Guitar)", player: "", channel: "CH 4" },
+          { instrument: "低音結他 (Bass)", player: "", channel: "CH 5" },
+          { instrument: "鼓組 (Drums)", player: "", channel: "CH 6-10" }
+        ],
+        rows: [
+          { time: "6:00", mins: "", title: "場外宣傳", person: "", vocalMic: "", singerMic: "", headMic: "", media: "PPT：主題頁", note: "" },
+          { time: "7:00", mins: "", title: "入場、set up、試位", person: "", vocalMic: "", singerMic: "", headMic: "", media: "PPT：主題頁", note: "" },
+          { time: "7:30", mins: "1", title: "宣佈開始", person: "剛揚", vocalMic: "1", singerMic: "", headMic: "", media: "PPT：主題頁", note: "" },
+          { time: "7:31", mins: "11", title: "唱遊：那裡有愛", person: "剛揚", vocalMic: "1", singerMic: "", headMic: "", media: "PPT：主題頁", note: "" }
+        ]
+      };
+    }
+
+    function showStatus(msg) {
+      const banner = document.getElementById('statusBanner');
+      banner.innerText = msg;
+      banner.style.display = 'block';
+    }
+
+    function renderSelectorDropdown(targetId) {
+      const selector = document.getElementById('rundownSelector');
+      selector.innerHTML = '';
+      if (savedRundowns.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.text = '（尚無儲存紀錄 - 預設範本）';
+        selector.appendChild(opt);
+        populateForm(getDefaultTemplate());
+        return;
+      }
+      savedRundowns.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        const namePart = item.eventName ? `${item.eventName} - ` : '';
+        const datePart = item.eventDate || '未定日期';
+        const locPart = item.eventLocation ? ` [${item.eventLocation}]` : '';
+        opt.text = `${namePart}${datePart}${locPart}`;
+        selector.appendChild(opt);
+      });
+      selector.value = (targetId && savedRundowns.some(r => r.id === targetId)) ? targetId : savedRundowns[0].id;
+      onSelectRundown();
+    }
+
+    function onSelectRundown() {
+      const selectedId = document.getElementById('rundownSelector').value;
+      const found = savedRundowns.find(r => r.id === selectedId);
+      if (found && found.payload) {
+        found.payload.id = found.id;
+        populateForm(found.payload);
+      } else {
+        populateForm(getDefaultTemplate());
+      }
+    }
+
+    function openNewRundownModal() {
+      const copySelect = document.getElementById('copySourceSelect');
+      copySelect.innerHTML = '';
+
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.text = '✨ 建立空白預設範本';
+      copySelect.appendChild(defaultOpt);
+
+      savedRundowns.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        const namePart = item.eventName ? `${item.eventName} - ` : '';
+        const datePart = item.eventDate || '未定日期';
+        const locPart = item.eventLocation ? ` [${item.eventLocation}]` : '';
+        opt.text = `📋 複製：${namePart}${datePart}${locPart}`;
+        copySelect.appendChild(opt);
+      });
+
+      if (currentRundownId && savedRundowns.some(r => r.id === currentRundownId)) {
+        copySelect.value = currentRundownId;
+      }
+
+      document.getElementById('newRundownModal').style.display = 'flex';
+    }
+
+    function closeNewRundownModal() {
+      document.getElementById('newRundownModal').style.display = 'none';
+    }
+
+    function confirmCreateNewRundown() {
+      const sourceId = document.getElementById('copySourceSelect').value;
+      closeNewRundownModal();
+
+      let draftData;
+      let draftLabel = '（新場次草稿 - 尚未儲存）';
+
+      if (sourceId) {
+        const found = savedRundowns.find(r => r.id === sourceId);
+        if (found && found.payload) {
+          draftData = JSON.parse(JSON.stringify(found.payload));
+          draftData.id = "";
+          draftData.eventName = (draftData.eventName || "福音聚會") + "（複製）";
+          draftData.eventDate = new Date().toISOString().split('T')[0];
+          draftLabel = `（複製草稿：${draftData.eventName} - 尚未儲存）`;
+        } else {
+          draftData = getDefaultTemplate();
+        }
+      } else {
+        draftData = getDefaultTemplate();
+      }
+
+      populateForm(draftData);
+
+      const selector = document.getElementById('rundownSelector');
+      if (selector.options.length > 0 && selector.options[0].value === '') {
+        selector.remove(0);
+      }
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.text = draftLabel;
+      selector.insertBefore(opt, selector.firstChild);
+      selector.value = '';
+    }
+
+    function populateForm(data) {
+      currentRundownId = data.id || "";
+      document.getElementById('eventName').value = data.eventName || "";
+      document.getElementById('eventDate').value = data.eventDate || "";
+      document.getElementById('eventTime').value = data.eventTime || "";
+      document.getElementById('eventLocation').value = data.eventLocation || "";
+
+      document.querySelectorAll('.role-item').forEach(item => {
+        const roleName = item.getAttribute('data-role');
+        item.querySelector('input').value = (data.roles && data.roles[roleName]) ? data.roles[roleName] : "";
+      });
+
+      const bandBody = document.getElementById('bandBody');
+      bandBody.innerHTML = '';
+      const bandList = data.band || [];
+      bandList.forEach(b => addBandRowWithData(b));
+      updateBandNumbers();
+
+      const tbody = document.getElementById('rundownBody');
+      tbody.innerHTML = '';
+      (data.rows || []).forEach(r => addRowWithData(r));
+      updateRowNumbers();
+      recalculateTimes();
+      syncDataToView();
+    }
+
+    function collectFormData() {
+      const roles = {};
+      document.querySelectorAll('.role-item').forEach(item => {
+        roles[item.getAttribute('data-role')] = item.querySelector('input').value.trim();
+      });
+
+      const band = [];
+      document.querySelectorAll('#bandBody tr').forEach(tr => {
+        const inputs = tr.querySelectorAll('input');
+        band.push({
+          instrument: inputs[0].value.trim(),
+          player: inputs[1].value.trim(),
+          channel: inputs[2].value.trim()
+        });
+      });
+
+      const rows = [];
+      document.querySelectorAll('#rundownBody tr').forEach(tr => {
+        const inputs = tr.querySelectorAll('input');
+        const select = tr.querySelector('select');
+        rows.push({
+          time: inputs[0].value.trim(),
+          mins: inputs[1].value.trim(),
+          title: inputs[2].value.trim(),
+          person: inputs[3].value.trim(),
+          vocalMic: inputs[4].value.trim(),
+          singerMic: inputs[5].value.trim(),
+          headMic: inputs[6].value.trim(),
+          media: select.value,
+          note: inputs[7].value.trim()
+        });
+      });
+
+      return {
+        id: currentRundownId,
+        eventName: document.getElementById('eventName').value.trim(),
+        eventDate: document.getElementById('eventDate').value,
+        eventTime: document.getElementById('eventTime').value.trim(),
+        eventLocation: document.getElementById('eventLocation').value.trim(),
+        roles: roles,
+        band: band,
+        rows: rows
+      };
+    }
+
+    function syncDataToView() {
+      document.getElementById('viewEventName').innerText = document.getElementById('eventName').value || '—';
+      document.getElementById('viewEventDate').innerText = document.getElementById('eventDate').value || '—';
+      document.getElementById('viewEventTime').innerText = document.getElementById('eventTime').value || '—';
+      document.getElementById('viewEventLocation').innerText = document.getElementById('eventLocation').value || '—';
+
+      document.querySelectorAll('.role-item').forEach(item => {
+        item.querySelector('.role-view-val').innerText = item.querySelector('input').value.trim() || '—';
+      });
+
+      document.querySelectorAll('#bandBody tr').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const spans = row.querySelectorAll('.view-text');
+        if (spans[0]) spans[0].innerText = inputs[0].value.trim() || '—';
+        if (spans[1]) spans[1].innerText = inputs[1].value.trim() || '—';
+        if (spans[2]) {
+          const chVal = inputs[2].value.trim();
+          spans[2].innerHTML = chVal ? `<span class="ch-badge">${chVal}</span>` : '—';
+        }
+      });
+
+      document.querySelectorAll('#rundownBody tr').forEach(row => {
+        row.querySelectorAll('td').forEach((cell, idx) => {
+          if (idx === 0 || cell.classList.contains('action-col')) return;
+          const input = cell.querySelector('input');
+          const select = cell.querySelector('select');
+          const span = cell.querySelector('.view-text');
+          let val = '';
+
+          if (input && span) {
+            val = input.value.trim();
+            span.innerText = val;
+          } else if (select && span) {
+            val = select.value;
+            span.innerHTML = formatMediaBadge(val);
+          }
+
+          if (!val) cell.classList.add('empty-cell');
+          else cell.classList.remove('empty-cell');
+        });
+      });
+    }
+
+    function formatMediaBadge(val) {
+      if (!val) return '';
+      let c = '';
+      if (val.includes('主題頁')) c = 'badge-theme';
+      else if (val.includes('信息')) c = 'badge-msg';
+      else if (val.includes('見證')) c = 'badge-testimony';
+      else if (val.includes('歌詞')) c = 'badge-lyrics';
+      else if (val.includes('活動')) c = 'badge-promo';
+      return `<span class="badge ${c}">${val}</span>`;
+    }
+
+    function addBandRow() { addBandRowWithData({}); updateBandNumbers(); }
+    function addBandRowWithData(d) {
+      const tbody = document.getElementById("bandBody");
+      const r = tbody.insertRow(tbody.rows.length);
+      r.innerHTML = `
+        <td class="band-num band-col-seq"></td>
+        <td class="text-left band-col-inst"><input type="text" class="edit-control text-left" value="${d.instrument || ''}" placeholder="例如：Keyboard / 電結他"><span class="view-text"></span></td>
+        <td class="band-col-player"><input type="text" class="edit-control" value="${d.player || ''}" placeholder="樂手名稱"><span class="view-text"></span></td>
+        <td class="band-col-ch"><input type="text" class="edit-control" value="${d.channel || ''}" placeholder="例如：CH 1"><span class="view-text"></span></td>
+        <td class="action-col">
+          <div class="row-actions">
+            <button type="button" class="btn-move" title="上移" onclick="moveBandRow(this, -1)">▲</button>
+            <button type="button" class="btn-move" title="下移" onclick="moveBandRow(this, 1)">▼</button>
+            <button type="button" class="btn-danger" title="刪除" onclick="deleteBandRow(this)">✕</button>
+          </div>
+        </td>
+      `;
+    }
+
+    function moveBandRow(btn, direction) {
+      const row = btn.closest('tr');
+      const tbody = row.parentNode;
+      if (direction === -1 && row.previousElementSibling) { tbody.insertBefore(row, row.previousElementSibling); }
+      else if (direction === 1 && row.nextElementSibling) { tbody.insertBefore(row.nextElementSibling, row); }
+      updateBandNumbers();
+    }
+
+    function deleteBandRow(btn) {
+      const row = btn.closest('tr');
+      row.parentNode.removeChild(row);
+      updateBandNumbers();
+    }
+
+    function updateBandNumbers() {
+      const rows = document.getElementById("bandBody").rows;
+      for (let i = 0; i < rows.length; i++) { rows[i].querySelector('.band-num').innerText = i + 1; }
+    }
+
+    function parseTimeToMinutes(str) {
+      if (!str) return null;
+      const p = str.trim().split(':');
+      if (p.length !== 2) return null;
+      const h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+      return (isNaN(h) || isNaN(m) || h < 0 || m < 0 || m >= 60) ? null : h * 60 + m;
+    }
+
+    function formatMinutesToTime(total) {
+      const n = ((total % 1440) + 1440) % 1440;
+      const h = Math.floor(n / 60), m = n % 60;
+      return `${h}:${m < 10 ? '0' + m : m}`;
+    }
+
+    function recalculateTimes() {
+      const rows = document.getElementById("rundownBody").rows;
+      let totalMins = 0;
+      for (let i = 0; i < rows.length; i++) {
+        const start = parseTimeToMinutes(rows[i].querySelector('.time-input').value);
+        const durStr = rows[i].querySelector('.min-input').value.trim();
+        const dur = durStr !== "" ? parseInt(durStr, 10) : NaN;
+        if (!isNaN(dur) && dur > 0) totalMins += dur;
+        if (i + 1 < rows.length && start !== null && !isNaN(dur)) {
+          rows[i + 1].querySelector('.time-input').value = formatMinutesToTime(start + dur);
+        }
+      }
+      document.getElementById("totalMinutes").innerText = totalMins;
+    }
+
+    function addRow() { addRowWithData({}); updateRowNumbers(); recalculateTimes(); }
+
+    function addRowWithData(d) {
+      const tbody = document.getElementById("rundownBody");
+      const r = tbody.insertRow(tbody.rows.length);
+      const mv = d.media || "";
+      r.innerHTML = `
+        <td class="row-num col-seq"></td>
+        <td class="col-time"><input type="text" class="edit-control time-input" value="${d.time || ''}" placeholder="hh:mm" onchange="recalculateTimes()"><span class="view-text"></span></td>
+        <td class="col-mins"><input type="number" class="edit-control min-input" value="${d.mins || ''}" placeholder="min" min="0" oninput="recalculateTimes()"><span class="view-text"></span></td>
+        <td class="text-left col-title"><input type="text" class="edit-control text-left" value="${d.title || ''}" placeholder="項目名稱"><span class="view-text"></span></td>
+        <td data-label="負責/分享/唱歌"><input type="text" class="edit-control" value="${d.person || ''}" placeholder="負責人"><span class="view-text"></span></td>
+        <td data-label="人聲無線咪"><input type="number" class="edit-control" value="${d.vocalMic || ''}" placeholder="數量"><span class="view-text"></span></td>
+        <td data-label="歌手無線咪"><input type="number" class="edit-control" value="${d.singerMic || ''}" placeholder="數量"><span class="view-text"></span></td>
+        <td data-label="頭咪"><input type="number" class="edit-control" value="${d.headMic || ''}" placeholder="數量"><span class="view-text"></span></td>
+        <td data-label="多媒體">
+          <select class="edit-control">
+            <option value="" ${mv === '' ? 'selected' : ''}>請選擇</option>
+            <option value="PPT：主題頁" ${mv === 'PPT：主題頁' ? 'selected' : ''}>PPT：主題頁</option>
+            <option value="PPT：信息" ${mv === 'PPT：信息' ? 'selected' : ''}>PPT：信息</option>
+            <option value="PPT：見證" ${mv === 'PPT：見證' ? 'selected' : ''}>PPT：見證</option>
+            <option value="PPT：歌詞" ${mv === 'PPT：歌詞' ? 'selected' : ''}>PPT：歌詞</option>
+            <option value="PPT：各樣活動" ${mv === 'PPT：各樣活動' ? 'selected' : ''}>PPT：各樣活動</option>
+          </select>
+          <span class="view-text"></span>
+        </td>
+        <td data-label="備註"><input type="text" class="edit-control" value="${d.note || ''}" placeholder="備註"><span class="view-text"></span></td>
+        <td class="action-col">
+          <div class="row-actions">
+            <button type="button" class="btn-move" title="上移" onclick="moveRundownRow(this, -1)">▲</button>
+            <button type="button" class="btn-move" title="下移" onclick="moveRundownRow(this, 1)">▼</button>
+            <button type="button" class="btn-danger" title="刪除" onclick="deleteRow(this)">✕</button>
+          </div>
+        </td>
+      `;
+    }
+
+    function moveRundownRow(btn, direction) {
+      const row = btn.closest('tr');
+      const tbody = row.parentNode;
+      if (direction === -1 && row.previousElementSibling) {
+        const prevRow = row.previousElementSibling;
+        if (!prevRow.previousElementSibling) {
+          const firstTime = prevRow.querySelector('.time-input').value;
+          const currentTime = row.querySelector('.time-input').value;
+          if (firstTime && !currentTime) { row.querySelector('.time-input').value = firstTime; }
+        }
+        tbody.insertBefore(row, prevRow);
+      } else if (direction === 1 && row.nextElementSibling) {
+        const nextRow = row.nextElementSibling;
+        if (!row.previousElementSibling) {
+          const firstTime = row.querySelector('.time-input').value;
+          const nextTime = nextRow.querySelector('.time-input').value;
+          if (firstTime && !nextTime) { nextRow.querySelector('.time-input').value = firstTime; }
+        }
+        tbody.insertBefore(nextRow, row);
+      }
+      updateRowNumbers();
+      recalculateTimes();
+    }
+
+    function deleteRow(btn) {
+      const row = btn.closest('tr');
+      row.parentNode.removeChild(row);
+      updateRowNumbers();
+      recalculateTimes();
+    }
+
+    function updateRowNumbers() {
+      const rows = document.getElementById("rundownBody").rows;
+      for (let i = 0; i < rows.length; i++) { rows[i].querySelector('.row-num').innerText = i + 1; }
+    }
+
+    function autoDetectDeviceLayout() {
+      const w = window.innerWidth;
+      if (w <= 600) { setDeviceLayout('mobile'); }
+      else if (w <= 1024) { setDeviceLayout('tablet'); }
+      else { setDeviceLayout('desktop'); }
+    }
+
+    window.onload = function() {
+      autoDetectDeviceLayout();
+      populateForm(getDefaultTemplate());
+      loadAllRundownsFromServer();
+    };
+  </script>
