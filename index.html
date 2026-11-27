@@ -50,6 +50,26 @@
         .table-input:hover, .table-textarea:hover { border-color: #e2e8f0; background: #f1f5f9; }
         .table-input:focus, .table-textarea:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
 
+        /* 各崗位負責人雙欄網格排版 */
+        #crewGrid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        #mainContainer.layout-mobile #crewGrid,
+        @media (max-width: 639px) {
+            #crewGrid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+        @media print {
+            #crewGrid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+            .collapsible-content {
+                display: block !important;
+            }
+        }
+
         /* 隱藏數字輸入框上下箭頭，避免窄螢幕擠壓數字 */
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
@@ -152,37 +172,33 @@
         <!-- 各崗位負責人區塊 -->
         <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col mb-6 print:break-inside-avoid">
             <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
-                <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-users mr-2"></i>各崗位負責人</h2>
-                <button onclick="addCrewRow()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg shadow transition text-sm font-medium flex items-center">
+                <button type="button" onclick="toggleSection('crewContent', 'crewToggleIcon')" class="flex items-center gap-2 text-lg font-bold text-slate-700 hover:text-indigo-600 transition text-left">
+                    <i id="crewToggleIcon" class="fa-solid fa-chevron-down text-sm text-slate-400 transition-transform duration-200"></i>
+                    <span><i class="fa-solid fa-users mr-2"></i>各崗位負責人</span>
+                </button>
+                <button onclick="addCrewRow()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg shadow transition text-sm font-medium flex items-center whitespace-nowrap shrink-0">
                     <i class="fa-solid fa-plus mr-2"></i>新增崗位
                 </button>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse" id="crewTable">
-                    <thead class="bg-slate-100 shadow-sm">
-                        <tr>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4 min-w-[90px]">崗位 (Role)</th>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4 min-w-[90px]">姓名 (Name)</th>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-2/4 min-w-[140px]">聯絡方式 / 備註 (Contact & Remarks)</th>
-                            <th class="admin-only py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">刪除</th>
-                        </tr>
-                    </thead>
-                    <tbody id="crewBody" class="divide-y divide-slate-200 bg-white">
-                        <!-- 動態生成 -->
-                    </tbody>
-                </table>
+            <div id="crewContent" class="collapsible-content">
+                <div id="crewGrid" class="divide-y sm:divide-y-0 bg-white">
+                    <!-- 動態生成雙欄崗位項目 -->
+                </div>
             </div>
         </div>
 
         <!-- 樂隊樂器列表區塊 -->
         <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col mb-6 print:break-inside-avoid">
             <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
-                <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-sliders mr-2"></i>樂隊與音響清單 (Band & Sound Channel)</h2>
+                <button type="button" onclick="toggleSection('bandContent', 'bandToggleIcon')" class="flex items-center gap-2 text-lg font-bold text-slate-700 hover:text-indigo-600 transition text-left">
+                    <i id="bandToggleIcon" class="fa-solid fa-chevron-down text-sm text-slate-400 transition-transform duration-200"></i>
+                    <span><i class="fa-solid fa-sliders mr-2"></i>樂隊與音響清單 (Band & Sound Channel)</span>
+                </button>
                 <button onclick="addBandRow()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg shadow transition text-sm font-medium flex items-center whitespace-nowrap shrink-0">
                     <i class="fa-solid fa-plus mr-2"></i>新增 Channel
                 </button>
             </div>
-            <div class="overflow-x-auto">
+            <div id="bandContent" class="collapsible-content overflow-x-auto">
                 <table class="w-full text-left border-collapse" id="bandTable">
                     <thead class="bg-slate-100 shadow-sm">
                         <tr>
@@ -406,6 +422,23 @@
         function handleCrewInput(id, field, value) { const item = crewData.find(i => i.id === id); if (item) item[field] = value; }
         function handleBandInput(id, field, value) { const item = bandData.find(i => i.id === id); if (item) item[field] = value; }
 
+        // 收起 / 展開區塊
+        function toggleSection(contentId, iconId) {
+            const content = document.getElementById(contentId);
+            const icon = document.getElementById(iconId);
+            if (!content || !icon) return;
+
+            const isHidden = content.classList.toggle('hidden');
+            if (isHidden) {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+                setTimeout(recalculateAllTextareas, 10);
+            }
+        }
+
         function renderTable() {
             const tbody = document.getElementById('rundownBody');
             if (!tbody) return;
@@ -479,18 +512,33 @@
         }
 
         function renderCrewTable() {
-            const tbody = document.getElementById('crewBody'); tbody.innerHTML = '';
-            crewData.forEach((item) => {
-                const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
-                tr.innerHTML = `
-                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea font-medium text-sm" oninput="autoResize(this); handleCrewInput('${item.id}', 'role', this.value)" placeholder="輸入崗位...">${item.role}</textarea></td>
-                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleCrewInput('${item.id}', 'name', this.value)" placeholder="輸入姓名...">${item.name}</textarea></td>
-                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea text-sm text-slate-600" oninput="autoResize(this); handleCrewInput('${item.id}', 'contact', this.value)" placeholder="輸入聯絡方式或備註...">${item.contact}</textarea></td>
-                    <td class="admin-only py-1.5 px-3 no-print text-center"><button onclick="deleteCrewRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
-                `; tbody.appendChild(tr);
+            const grid = document.getElementById('crewGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            crewData.forEach((item, index) => {
+                const isRightCol = index % 2 === 1;
+                const card = document.createElement('div');
+                card.className = `flex items-center gap-1.5 px-3 py-2 border-b border-slate-200 hover:bg-slate-50 transition-colors ${isRightCol ? 'sm:border-l sm:border-slate-200' : ''}`;
+                card.innerHTML = `
+                    <div class="w-[30%] min-w-[76px] shrink-0">
+                        <textarea rows="1" class="table-textarea font-semibold text-sm text-indigo-900" oninput="autoResize(this); handleCrewInput('${item.id}', 'role', this.value)" placeholder="崗位...">${item.role || ''}</textarea>
+                    </div>
+                    <div class="w-[26%] min-w-[68px] shrink-0">
+                        <textarea rows="1" class="table-textarea font-medium text-sm" oninput="autoResize(this); handleCrewInput('${item.id}', 'name', this.value)" placeholder="姓名...">${item.name || ''}</textarea>
+                    </div>
+                    <div class="flex-grow min-w-0">
+                        <textarea rows="1" class="table-textarea text-sm text-slate-600" oninput="autoResize(this); handleCrewInput('${item.id}', 'contact', this.value)" placeholder="聯絡/備註...">${item.contact || ''}</textarea>
+                    </div>
+                    <div class="admin-only shrink-0 no-print text-center">
+                        <button type="button" onclick="deleteCrewRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors p-1" title="刪除崗位">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
             });
             setTimeout(() => {
-                document.querySelectorAll('#crewTable .table-textarea').forEach(el => autoResize(el));
+                document.querySelectorAll('#crewGrid .table-textarea').forEach(el => autoResize(el));
             }, 10);
         }
 
@@ -724,7 +772,7 @@
         // 7. 版面預覽切換 (Layout Switcher)
         // ---------------------------------------------------
         function recalculateAllTextareas() {
-            document.querySelectorAll('#rundownTable .table-textarea, #crewTable .table-textarea, #bandTable .table-textarea').forEach(el => autoResize(el));
+            document.querySelectorAll('#rundownTable .table-textarea, #crewGrid .table-textarea, #bandTable .table-textarea').forEach(el => autoResize(el));
         }
 
         function switchLayout(mode) {
@@ -745,13 +793,13 @@
             let baseClasses = "flex-grow p-4 sm:p-6 lg:p-8 mx-auto w-full print-full-width transition-all duration-500 ease-in-out origin-top";
             
             if (mode === 'mobile') {
-                main.className = baseClasses + " max-w-[400px] border-x-[12px] border-y-[24px] border-slate-800 bg-slate-100 shadow-2xl mt-6 rounded-[2.5rem] overflow-hidden relative";
+                main.className = baseClasses + " layout-mobile max-w-[400px] border-x-[12px] border-y-[24px] border-slate-800 bg-slate-100 shadow-2xl mt-6 rounded-[2.5rem] overflow-hidden relative";
                 btnMobile.className = activeBtnClass;
             } else if (mode === 'tablet') {
-                main.className = baseClasses + " max-w-[820px] border-x-[16px] border-y-[32px] border-slate-800 bg-slate-100 shadow-2xl mt-6 rounded-[2rem] overflow-hidden relative";
+                main.className = baseClasses + " layout-tablet max-w-[820px] border-x-[16px] border-y-[32px] border-slate-800 bg-slate-100 shadow-2xl mt-6 rounded-[2rem] overflow-hidden relative";
                 btnTablet.className = activeBtnClass;
             } else {
-                main.className = baseClasses + " max-w-7xl";
+                main.className = baseClasses + " layout-desktop max-w-7xl";
                 btnDesktop.className = activeBtnClass;
             }
             
