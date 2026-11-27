@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教會活動流程表 (Rundown) 製作工具</title>
+    <title>專業活動流程表 (Rundown) 製作工具</title>
     <!-- 引入 Tailwind CSS 進行美化 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 FontAwesome 圖示 -->
@@ -161,9 +161,9 @@
                 <table class="w-full text-left border-collapse" id="crewTable">
                     <thead class="bg-slate-100 shadow-sm">
                         <tr>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">崗位 (Role)</th>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">姓名 (Name)</th>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-2/4">聯絡方式 / 備註 (Contact & Remarks)</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4 min-w-[90px]">崗位 (Role)</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4 min-w-[90px]">姓名 (Name)</th>
+                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-2/4 min-w-[140px]">聯絡方式 / 備註 (Contact & Remarks)</th>
                             <th class="admin-only py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">刪除</th>
                         </tr>
                     </thead>
@@ -178,7 +178,7 @@
         <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden flex flex-col mb-6 print:break-inside-avoid">
             <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center no-print">
                 <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-sliders mr-2"></i>樂隊與音響清單 (Band & Sound Channel)</h2>
-                <button onclick="addBandRow()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg shadow transition text-sm font-medium flex items-center">
+                <button onclick="addBandRow()" class="admin-only bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg shadow transition text-sm font-medium flex items-center whitespace-nowrap shrink-0">
                     <i class="fa-solid fa-plus mr-2"></i>新增 Channel
                 </button>
             </div>
@@ -186,12 +186,12 @@
                 <table class="w-full text-left border-collapse" id="bandTable">
                     <thead class="bg-slate-100 shadow-sm">
                         <tr>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center">CH</th>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">樂器 / 輸入 (Input)</th>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4">收音方式 / 麥克風 (Mic/DI)</th>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/5">樂手 (Musician)</th>
-                            <th class="py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/5">備註 (Remarks)</th>
-                            <th class="admin-only py-2 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">刪除</th>
+                            <th class="py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-14 min-w-[52px] text-center">CH</th>
+                            <th class="py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4 min-w-[100px]">樂器 / 輸入 (Input)</th>
+                            <th class="py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/4 min-w-[110px]">收音方式 / 麥克風 (Mic/DI)</th>
+                            <th class="py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/5 min-w-[90px]">樂手 (Musician)</th>
+                            <th class="py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-1/5 min-w-[100px]">備註 (Remarks)</th>
+                            <th class="admin-only py-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider w-14 no-print text-center">刪除</th>
                         </tr>
                     </thead>
                     <tbody id="bandBody" class="divide-y divide-slate-200 bg-white">
@@ -411,12 +411,15 @@
             crewData.forEach((item) => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
                 tr.innerHTML = `
-                    <td class="py-1 px-4"><input type="text" class="table-input font-medium" value="${item.role}" oninput="handleCrewInput('${item.id}', 'role', this.value)" placeholder="輸入崗位..."></td>
-                    <td class="py-1 px-4"><input type="text" class="table-input" value="${item.name}" oninput="handleCrewInput('${item.id}', 'name', this.value)" placeholder="輸入姓名..."></td>
-                    <td class="py-1 px-4"><input type="text" class="table-input text-slate-500" value="${item.contact}" oninput="handleCrewInput('${item.id}', 'contact', this.value)" placeholder="輸入聯絡方式或備註..."></td>
-                    <td class="admin-only py-1 px-4 no-print text-center"><button onclick="deleteCrewRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
+                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea font-medium text-sm" oninput="autoResize(this); handleCrewInput('${item.id}', 'role', this.value)" placeholder="輸入崗位...">${item.role}</textarea></td>
+                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleCrewInput('${item.id}', 'name', this.value)" placeholder="輸入姓名...">${item.name}</textarea></td>
+                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea text-sm text-slate-600" oninput="autoResize(this); handleCrewInput('${item.id}', 'contact', this.value)" placeholder="輸入聯絡方式或備註...">${item.contact}</textarea></td>
+                    <td class="admin-only py-1.5 px-3 no-print text-center"><button onclick="deleteCrewRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
                 `; tbody.appendChild(tr);
             });
+            setTimeout(() => {
+                document.querySelectorAll('#crewTable .table-textarea').forEach(el => autoResize(el));
+            }, 10);
         }
 
         function addCrewRow() { crewData.push({ id: generateId(), role: '', name: '', contact: '' }); renderCrewTable(); }
@@ -427,50 +430,16 @@
             bandData.forEach((item) => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50 transition-colors group";
                 tr.innerHTML = `
-                    <td class="py-1 px-4"><input type="text" class="table-input text-center font-mono font-bold" value="${item.ch}" oninput="handleBandInput('${item.id}', 'ch', this.value)" placeholder="CH"></td>
-                    <td class="py-1 px-4"><input type="text" class="table-input font-medium" value="${item.input}" oninput="handleBandInput('${item.id}', 'input', this.value)" placeholder="樂器/輸入..."></td>
-                    <td class="py-1 px-4"><input type="text" class="table-input" value="${item.mic}" oninput="handleBandInput('${item.id}', 'mic', this.value)" placeholder="收音方式/麥克風..."></td>
-                    <td class="py-1 px-4"><input type="text" class="table-input" value="${item.musician}" oninput="handleBandInput('${item.id}', 'musician', this.value)" placeholder="樂手姓名..."></td>
-                    <td class="py-1 px-4"><input type="text" class="table-input text-slate-500" value="${item.remarks}" oninput="handleBandInput('${item.id}', 'remarks', this.value)" placeholder="備註..."></td>
-                    <td class="admin-only py-1 px-4 no-print text-center"><button onclick="deleteBandRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
+                    <td class="py-1.5 px-2"><input type="text" class="table-input text-center font-mono font-bold text-sm px-1" value="${item.ch}" oninput="handleBandInput('${item.id}', 'ch', this.value)" placeholder="CH"></td>
+                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea font-medium text-sm" oninput="autoResize(this); handleBandInput('${item.id}', 'input', this.value)" placeholder="樂器/輸入...">${item.input}</textarea></td>
+                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleBandInput('${item.id}', 'mic', this.value)" placeholder="收音方式/麥克風...">${item.mic}</textarea></td>
+                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleBandInput('${item.id}', 'musician', this.value)" placeholder="樂手姓名...">${item.musician}</textarea></td>
+                    <td class="py-1.5 px-3"><textarea rows="1" class="table-textarea text-sm text-slate-600" oninput="autoResize(this); handleBandInput('${item.id}', 'remarks', this.value)" placeholder="備註...">${item.remarks}</textarea></td>
+                    <td class="admin-only py-1.5 px-2 no-print text-center"><button onclick="deleteBandRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
                 `; tbody.appendChild(tr);
             });
-        }
-
-        function addBandRow() {
-            let nextCh = bandData.length > 0 ? (parseInt(bandData[bandData.length-1].ch) || bandData.length) + 1 : 1;
-            bandData.push({ id: generateId(), ch: nextCh.toString(), input: '', mic: '', musician: '', remarks: '' }); renderBandTable();
-        }
-        function deleteBandRow(id) { bandData = bandData.filter(item => item.id !== id); renderBandTable(); }
-
-        function renderTable() {
-            const tbody = document.getElementById('rundownBody'); tbody.innerHTML = '';
-            let currentStartTime = document.getElementById('startTime').value || "00:00";
-            rundownData.forEach((item, index) => {
-                let endTime = addMinutesToTime(currentStartTime, item.duration);
-                const tr = document.createElement('tr'); tr.id = `row-${item.id}`; tr.className = "hover:bg-slate-50 transition-colors group";
-                tr.innerHTML = `
-                    <td class="admin-only py-2 px-2 no-print text-center"><div class="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
-                        <button onclick="moveRow(${index}, -1)" class="text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-chevron-up"></i></button>
-                        <button onclick="moveRow(${index}, 1)" class="text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-chevron-down"></i></button>
-                    </div></td>
-                    <td class="py-2 px-2 text-sm font-mono font-medium text-slate-700 start-time text-center">${currentStartTime}</td>
-                    <td class="py-2 px-2 text-sm font-mono font-medium text-slate-500 end-time text-center">${endTime}</td>
-                    <td class="py-2 px-2 text-center min-w-[68px]"><input type="number" min="0" class="table-input text-center font-mono text-sm px-1 min-w-[44px]" value="${item.duration}" onchange="handleInput('${item.id}', 'duration', this.value)"></td>
-                    <td class="py-2 px-2"><textarea rows="1" class="table-textarea font-medium" oninput="autoResize(this); handleInput('${item.id}', 'activity', this.value)" placeholder="輸入環節名稱...">${item.activity}</textarea></td>
-                    <td class="py-2 px-2"><textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleInput('${item.id}', 'pic', this.value)" placeholder="負責人...">${item.pic}</textarea></td>
-                    <td class="py-2 px-1"><input type="number" min="0" class="table-input text-center text-sm px-0" value="${item.vocalMic !== undefined ? item.vocalMic : ''}" oninput="handleInput('${item.id}', 'vocalMic', this.value)" placeholder="-"></td>
-                    <td class="py-2 px-1"><input type="number" min="0" class="table-input text-center text-sm px-0" value="${item.singerMic !== undefined ? item.singerMic : ''}" oninput="handleInput('${item.id}', 'singerMic', this.value)" placeholder="-"></td>
-                    <td class="py-2 px-1"><input type="number" min="0" class="table-input text-center text-sm px-0" value="${item.headsetMic !== undefined ? item.headsetMic : ''}" oninput="handleInput('${item.id}', 'headsetMic', this.value)" placeholder="-"></td>
-                    <td class="py-2 px-2"><textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleInput('${item.id}', 'multimedia', this.value)" placeholder="PPT / 影片...">${item.multimedia || ''}</textarea></td>
-                    <td class="py-2 px-2"><textarea rows="1" class="table-textarea text-sm text-slate-500" oninput="autoResize(this); handleInput('${item.id}', 'remarks', this.value)" placeholder="備註事項...">${item.remarks}</textarea></td>
-                    <td class="admin-only py-2 px-2 no-print text-center"><button onclick="deleteRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
-                `; tbody.appendChild(tr); currentStartTime = endTime;
-            });
-            
-            // 渲染後自動觸發所有文字框的高度調整
             setTimeout(() => {
-                document.querySelectorAll('#rundownTable .table-textarea').forEach(el => autoResize(el));
+                document.querySelectorAll('#bandTable .table-textarea').forEach(el => autoResize(el));
             }, 10);
         }
 
@@ -683,7 +652,7 @@
         // 7. 版面預覽切換 (Layout Switcher)
         // ---------------------------------------------------
         function recalculateAllTextareas() {
-            document.querySelectorAll('#rundownTable .table-textarea').forEach(el => autoResize(el));
+            document.querySelectorAll('#rundownTable .table-textarea, #crewTable .table-textarea, #bandTable .table-textarea').forEach(el => autoResize(el));
         }
 
         function switchLayout(mode) {
