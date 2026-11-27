@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>教會福音聚會 Rundown 系統</title>
   <style id="dynamicPrintStyle">
     @page { size: A4 landscape; margin: 10mm; }
   </style>
@@ -509,7 +510,7 @@
       </div>
     </div>
 
-    <!-- 3. 樂隊樂器列表 (新增區塊) -->
+    <!-- 3. 樂隊樂器列表 -->
     <div class="container">
       <div class="section-header">
         <h2>🎸 樂隊樂器列表 (Band & Sound Channel)</h2>
@@ -574,12 +575,84 @@
   </div>
 
   <script>
-    const ADMIN_PASSWORD = "1234"; // 管理員密碼
+    const ADMIN_PASSWORD = "2c62"; // 管理員密碼
     let savedRundowns = [];
     let currentRundownId = "";
     let currentDeviceLayout = "desktop";
 
-    // 切換 Desktop / Tablet / Mobile 閱讀與列印版面
+    // ==================== 連接 Google Apps Script Web App API ====================
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby_HosbSbX33DwzNCu-vr7pkvnhLv_JN1WHX518fSlvT1EpmcBS-CnmkoXzgPiHWl3S1Q/exec";
+
+    function callGas(action, payload) {
+      showStatus('⏳ 正在與 Google 雲端通訊...');
+      
+      if (action === 'getAll') {
+        return fetch(GAS_WEB_APP_URL + "?action=getAll")
+          .then(response => response.json());
+      } else {
+        // 使用 text/plain 避免觸發瀏覽器 OPTIONS 預檢阻擋，GAS 後端依然能正常解析 JSON
+        return fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({ action: action, payload: payload })
+        })
+        .then(response => response.json());
+      }
+    }
+
+    function loadAllRundownsFromServer(selectIdAfterLoad) {
+      showStatus('⏳ 正在讀取試算表資料...');
+      callGas('getAll', null)
+        .then(list => {
+          document.getElementById('statusBanner').style.display = 'none';
+          savedRundowns = list || [];
+          renderSelectorDropdown(selectIdAfterLoad);
+        })
+        .catch(err => {
+          showStatus('❌ 讀取失敗：' + err.message);
+          populateForm(getDefaultTemplate());
+        });
+    }
+
+    function saveCurrentRundown() {
+      const payload = collectFormData();
+      if (!payload.eventName && !payload.eventDate) {
+        alert('請先填寫「活動名稱」或「日期」再儲存！');
+        return;
+      }
+      
+      showStatus('⏳ 正在儲存至 Google 試算表...');
+      callGas('save', payload)
+        .then(res => {
+          if (res.status === 'error') throw new Error(res.message);
+          currentRundownId = res.id;
+          showStatus('✅ 儲存成功！');
+          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 3000);
+          loadAllRundownsFromServer(res.id);
+        })
+        .catch(err => {
+          showStatus('❌ 儲存失敗：' + err.message);
+        });
+    }
+
+    function deleteCurrentRundown() {
+      if (!currentRundownId) { alert('此場次尚未儲存，無需刪除。'); return; }
+      if (!confirm('確定要從 Google 試算表永久刪除此場次嗎？')) return;
+      
+      showStatus('⏳ 正在刪除...');
+      callGas('delete', { id: currentRundownId })
+        .then(res => {
+          if (res.status === 'error') throw new Error(res.message);
+          showStatus('🗑️ 已刪除！');
+          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 2500);
+          loadAllRundownsFromServer();
+        })
+        .catch(err => { showStatus('❌ 刪除失敗：' + err.message); });
+    }
+
+    // ==================== 介面版面與模式控制 ====================
     function setDeviceLayout(layout) {
       currentDeviceLayout = layout;
       const body = document.body;
@@ -605,7 +678,6 @@
       window.print();
     }
 
-    // 通用收合/展開區塊函式
     function toggleSection(containerId, btnId) {
       const el = document.getElementById(containerId);
       const btn = document.getElementById(btnId);
@@ -680,26 +752,6 @@
       banner.style.display = 'block';
     }
 
-    function loadAllRundownsFromServer(selectIdAfterLoad) {
-      showStatus('⏳ 正在讀取試算表資料...');
-      if (typeof google === 'undefined' || !google.script) {
-        document.getElementById('statusBanner').style.display = 'none';
-        renderSelectorDropdown();
-        return;
-      }
-      google.script.run
-        .withSuccessHandler(function(list) {
-          document.getElementById('statusBanner').style.display = 'none';
-          savedRundowns = list || [];
-          renderSelectorDropdown(selectIdAfterLoad);
-        })
-        .withFailureHandler(function(err) {
-          showStatus('❌ 讀取失敗：' + err.message);
-          populateForm(getDefaultTemplate());
-        })
-        .getAllRundowns();
-    }
-
     function renderSelectorDropdown(targetId) {
       const selector = document.getElementById('rundownSelector');
       selector.innerHTML = '';
@@ -715,7 +767,7 @@
         const opt = document.createElement('option');
         opt.value = item.id;
         const namePart = item.eventName ? `${item.eventName} - ` : '';
-        const datePart = item.eventDate || '未定日期';
+        const datePart = item.eventDate ? item.eventDate.toString().split('T')[0] : '未定日期';
         const locPart = item.eventLocation ? ` [${item.eventLocation}]` : '';
         opt.text = `${namePart}${datePart}${locPart}`;
         selector.appendChild(opt);
@@ -748,7 +800,7 @@
         const opt = document.createElement('option');
         opt.value = item.id;
         const namePart = item.eventName ? `${item.eventName} - ` : '';
-        const datePart = item.eventDate || '未定日期';
+        const datePart = item.eventDate ? item.eventDate.toString().split('T')[0] : '未定日期';
         const locPart = item.eventLocation ? ` [${item.eventLocation}]` : '';
         opt.text = `📋 複製：${namePart}${datePart}${locPart}`;
         copySelect.appendChild(opt);
@@ -803,24 +855,21 @@
     function populateForm(data) {
       currentRundownId = data.id || "";
       document.getElementById('eventName').value = data.eventName || "";
-      document.getElementById('eventDate').value = data.eventDate || "";
+      document.getElementById('eventDate').value = data.eventDate ? data.eventDate.toString().split('T')[0] : "";
       document.getElementById('eventTime').value = data.eventTime || "";
       document.getElementById('eventLocation').value = data.eventLocation || "";
 
-      // 填入崗位
       document.querySelectorAll('.role-item').forEach(item => {
         const roleName = item.getAttribute('data-role');
         item.querySelector('input').value = (data.roles && data.roles[roleName]) ? data.roles[roleName] : "";
       });
 
-      // 填入樂隊樂器列表
       const bandBody = document.getElementById('bandBody');
       bandBody.innerHTML = '';
       const bandList = data.band || [];
       bandList.forEach(b => addBandRowWithData(b));
       updateBandNumbers();
 
-      // 填入節目流程表
       const tbody = document.getElementById('rundownBody');
       tbody.innerHTML = '';
       (data.rows || []).forEach(r => addRowWithData(r));
@@ -874,40 +923,6 @@
       };
     }
 
-    function saveCurrentRundown() {
-      const payload = collectFormData();
-      if (!payload.eventName && !payload.eventDate) {
-        alert('請先填寫「活動名稱」或「日期」再儲存！');
-        return;
-      }
-      showStatus('⏳ 正在儲存至 Google 試算表...');
-      google.script.run
-        .withSuccessHandler(function(res) {
-          currentRundownId = res.id;
-          showStatus('✅ 儲存成功！');
-          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 3000);
-          loadAllRundownsFromServer(res.id);
-        })
-        .withFailureHandler(function(err) {
-          showStatus('❌ 儲存失敗：' + err.message);
-        })
-        .saveRundownData(payload);
-    }
-
-    function deleteCurrentRundown() {
-      if (!currentRundownId) { alert('此場次尚未儲存，無需刪除。'); return; }
-      if (!confirm('確定要從 Google 試算表永久刪除此場次嗎？')) return;
-      showStatus('⏳ 正在刪除...');
-      google.script.run
-        .withSuccessHandler(function() {
-          showStatus('🗑️ 已刪除！');
-          setTimeout(() => { document.getElementById('statusBanner').style.display = 'none'; }, 2500);
-          loadAllRundownsFromServer();
-        })
-        .withFailureHandler(function(err) { showStatus('❌ 刪除失敗：' + err.message); })
-        .deleteRundownById(currentRundownId);
-    }
-
     function syncDataToView() {
       document.getElementById('viewEventName').innerText = document.getElementById('eventName').value || '—';
       document.getElementById('viewEventDate').innerText = document.getElementById('eventDate').value || '—';
@@ -918,7 +933,6 @@
         item.querySelector('.role-view-val').innerText = item.querySelector('input').value.trim() || '—';
       });
 
-      // 同步樂隊樂器表閱讀文字
       document.querySelectorAll('#bandBody tr').forEach(row => {
         const inputs = row.querySelectorAll('input');
         const spans = row.querySelectorAll('.view-text');
@@ -930,7 +944,6 @@
         }
       });
 
-      // 同步節目流程表閱讀文字
       document.querySelectorAll('#rundownBody tr').forEach(row => {
         row.querySelectorAll('td').forEach((cell, idx) => {
           if (idx === 0 || cell.classList.contains('action-col')) return;
@@ -964,12 +977,7 @@
       return `<span class="badge ${c}">${val}</span>`;
     }
 
-    // ==================== 樂隊樂器列表操作與上下調動 ====================
-    function addBandRow() {
-      addBandRowWithData({});
-      updateBandNumbers();
-    }
-
+    function addBandRow() { addBandRowWithData({}); updateBandNumbers(); }
     function addBandRowWithData(d) {
       const tbody = document.getElementById("bandBody");
       const r = tbody.insertRow(tbody.rows.length);
@@ -991,11 +999,8 @@
     function moveBandRow(btn, direction) {
       const row = btn.closest('tr');
       const tbody = row.parentNode;
-      if (direction === -1 && row.previousElementSibling) {
-        tbody.insertBefore(row, row.previousElementSibling);
-      } else if (direction === 1 && row.nextElementSibling) {
-        tbody.insertBefore(row.nextElementSibling, row);
-      }
+      if (direction === -1 && row.previousElementSibling) { tbody.insertBefore(row, row.previousElementSibling); }
+      else if (direction === 1 && row.nextElementSibling) { tbody.insertBefore(row.nextElementSibling, row); }
       updateBandNumbers();
     }
 
@@ -1007,12 +1012,9 @@
 
     function updateBandNumbers() {
       const rows = document.getElementById("bandBody").rows;
-      for (let i = 0; i < rows.length; i++) {
-        rows[i].querySelector('.band-num').innerText = i + 1;
-      }
+      for (let i = 0; i < rows.length; i++) { rows[i].querySelector('.band-num').innerText = i + 1; }
     }
 
-    // ==================== 節目流程表時間推算、上下調動與操作 ====================
     function parseTimeToMinutes(str) {
       if (!str) return null;
       const p = str.trim().split(':');
@@ -1079,19 +1081,15 @@
       `;
     }
 
-    // 上下調動節目流程項目，並自動重新排序與推算時間
     function moveRundownRow(btn, direction) {
       const row = btn.closest('tr');
       const tbody = row.parentNode;
       if (direction === -1 && row.previousElementSibling) {
-        // 若移動後變成第一行，將原本第一行的開始時間保留給新的第一行，方便連鎖計算
         const prevRow = row.previousElementSibling;
         if (!prevRow.previousElementSibling) {
           const firstTime = prevRow.querySelector('.time-input').value;
           const currentTime = row.querySelector('.time-input').value;
-          if (firstTime && !currentTime) {
-            row.querySelector('.time-input').value = firstTime;
-          }
+          if (firstTime && !currentTime) { row.querySelector('.time-input').value = firstTime; }
         }
         tbody.insertBefore(row, prevRow);
       } else if (direction === 1 && row.nextElementSibling) {
@@ -1099,9 +1097,7 @@
         if (!row.previousElementSibling) {
           const firstTime = row.querySelector('.time-input').value;
           const nextTime = nextRow.querySelector('.time-input').value;
-          if (firstTime && !nextTime) {
-            nextRow.querySelector('.time-input').value = firstTime;
-          }
+          if (firstTime && !nextTime) { nextRow.querySelector('.time-input').value = firstTime; }
         }
         tbody.insertBefore(nextRow, row);
       }
@@ -1118,18 +1114,14 @@
 
     function updateRowNumbers() {
       const rows = document.getElementById("rundownBody").rows;
-      for (let i = 0; i < rows.length; i++) rows[i].querySelector('.row-num').innerText = i + 1;
+      for (let i = 0; i < rows.length; i++) { rows[i].querySelector('.row-num').innerText = i + 1; }
     }
 
     function autoDetectDeviceLayout() {
       const w = window.innerWidth;
-      if (w <= 600) {
-        setDeviceLayout('mobile');
-      } else if (w <= 1024) {
-        setDeviceLayout('tablet');
-      } else {
-        setDeviceLayout('desktop');
-      }
+      if (w <= 600) { setDeviceLayout('mobile'); }
+      else if (w <= 1024) { setDeviceLayout('tablet'); }
+      else { setDeviceLayout('desktop'); }
     }
 
     window.onload = function() {
