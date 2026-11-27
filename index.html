@@ -29,8 +29,8 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* 表格輸入框樣式 */
-        .table-input {
+        /* 表格輸入框與多行文字框樣式 */
+        .table-input, .table-textarea {
             width: 100%;
             background: transparent;
             border: 1px solid transparent;
@@ -39,8 +39,26 @@
             outline: none;
             transition: all 0.2s;
         }
-        .table-input:hover { border-color: #e2e8f0; background: #f1f5f9; }
-        .table-input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        .table-textarea {
+            resize: none;
+            overflow: hidden;
+            line-height: 1.6; /* 稍微增加行高讓文字更易讀 */
+            min-height: 42px; /* 增加預設最小高度 */
+            word-break: break-word; /* 確保長單字會自動換行 */
+            vertical-align: middle; /* 讓文字在表格中對齊更漂亮 */
+        }
+        .table-input:hover, .table-textarea:hover { border-color: #e2e8f0; background: #f1f5f9; }
+        .table-input:focus, .table-textarea:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+
+        /* 隱藏數字輸入框上下箭頭，避免窄螢幕擠壓數字 */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
         
         /* 管理員與唯讀模式樣式 */
         body:not(.admin-mode) .admin-only { display: none !important; }
@@ -54,7 +72,8 @@
             -moz-appearance: none;
             appearance: none;
         }
-        body:not(.admin-mode) .table-input {
+        body:not(.admin-mode) .table-input,
+        body:not(.admin-mode) .table-textarea {
             pointer-events: none;
             border-color: transparent !important;
             background: transparent !important;
@@ -195,18 +214,18 @@
                 <table class="w-full text-left border-collapse" id="rundownTable">
                     <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm print:static">
                         <tr>
-                            <th class="admin-only py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">操作</th>
-                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">開始</th>
-                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">結束</th>
-                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24 text-center">時長(分)</th>
-                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[200px]">環節內容 (Activity)</th>
-                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">負責人 (PIC)</th>
-                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center" title="人聲咪數量">人聲咪</th>
-                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center" title="歌手咪數量">歌手咪</th>
-                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center" title="頭咪數量">頭咪</th>
-                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">多媒體</th>
-                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[150px]">備註 (Remarks)</th>
-                            <th class="admin-only py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">刪除</th>
+                            <th class="admin-only py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-12 no-print text-center">操作</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center">開始</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center">結束</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-20 min-w-[68px] whitespace-nowrap text-center">時長(分)</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[22%] min-w-[160px]">環節內容 (Activity)</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[12%] min-w-[100px]">負責人 (PIC)</th>
+                            <th class="py-3 px-1 text-xs font-semibold text-slate-500 uppercase tracking-wider w-12 text-center" title="人聲咪數量">人聲咪</th>
+                            <th class="py-3 px-1 text-xs font-semibold text-slate-500 uppercase tracking-wider w-12 text-center" title="歌手咪數量">歌手咪</th>
+                            <th class="py-3 px-1 text-xs font-semibold text-slate-500 uppercase tracking-wider w-12 text-center" title="頭咪數量">頭咪</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[16%] min-w-[130px]">多媒體</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%] min-w-[140px]">備註 (Remarks)</th>
+                            <th class="admin-only py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-12 no-print text-center">刪除</th>
                         </tr>
                     </thead>
                     <tbody id="rundownBody" class="divide-y divide-slate-200 bg-white">
@@ -298,6 +317,12 @@
         // ---------------------------------------------------
         
         function generateId() { return Math.random().toString(36).substr(2, 9); }
+        
+        // 自動調整文字框高度 (修復文字底部被裁切的問題)
+        function autoResize(el) {
+            el.style.height = '1px'; // 先縮到最小以取得真實需要的 scrollHeight
+            el.style.height = (el.scrollHeight + 4) + 'px'; // +4px 作為緩衝，保護文字底部
+        }
 
         function addMinutesToTime(timeStr, minutesToAdd) {
             if (!timeStr) return "00:00";
@@ -425,23 +450,28 @@
                 let endTime = addMinutesToTime(currentStartTime, item.duration);
                 const tr = document.createElement('tr'); tr.id = `row-${item.id}`; tr.className = "hover:bg-slate-50 transition-colors group";
                 tr.innerHTML = `
-                    <td class="admin-only py-2 px-4 no-print text-center"><div class="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                    <td class="admin-only py-2 px-2 no-print text-center"><div class="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
                         <button onclick="moveRow(${index}, -1)" class="text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-chevron-up"></i></button>
                         <button onclick="moveRow(${index}, 1)" class="text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-chevron-down"></i></button>
                     </div></td>
-                    <td class="py-2 px-4 text-sm font-mono font-medium text-slate-700 start-time">${currentStartTime}</td>
-                    <td class="py-2 px-4 text-sm font-mono font-medium text-slate-500 end-time">${endTime}</td>
-                    <td class="py-2 px-4 text-center"><input type="number" min="0" class="table-input text-center font-mono" value="${item.duration}" onchange="handleInput('${item.id}', 'duration', this.value)"></td>
-                    <td class="py-2 px-4"><input type="text" class="table-input font-medium" value="${item.activity}" oninput="handleInput('${item.id}', 'activity', this.value)" placeholder="輸入環節名稱..."></td>
-                    <td class="py-2 px-4"><input type="text" class="table-input text-sm" value="${item.pic}" oninput="handleInput('${item.id}', 'pic', this.value)" placeholder="負責人..."></td>
-                    <td class="py-2 px-2"><input type="number" min="0" class="table-input text-center text-sm px-1" value="${item.vocalMic !== undefined ? item.vocalMic : ''}" oninput="handleInput('${item.id}', 'vocalMic', this.value)" placeholder="-"></td>
-                    <td class="py-2 px-2"><input type="number" min="0" class="table-input text-center text-sm px-1" value="${item.singerMic !== undefined ? item.singerMic : ''}" oninput="handleInput('${item.id}', 'singerMic', this.value)" placeholder="-"></td>
-                    <td class="py-2 px-2"><input type="number" min="0" class="table-input text-center text-sm px-1" value="${item.headsetMic !== undefined ? item.headsetMic : ''}" oninput="handleInput('${item.id}', 'headsetMic', this.value)" placeholder="-"></td>
-                    <td class="py-2 px-4"><input type="text" class="table-input text-sm" value="${item.multimedia || ''}" oninput="handleInput('${item.id}', 'multimedia', this.value)" placeholder="PPT / 影片..."></td>
-                    <td class="py-2 px-4"><input type="text" class="table-input text-sm text-slate-500" value="${item.remarks}" oninput="handleInput('${item.id}', 'remarks', this.value)" placeholder="備註事項..."></td>
-                    <td class="admin-only py-2 px-4 no-print text-center"><button onclick="deleteRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
+                    <td class="py-2 px-2 text-sm font-mono font-medium text-slate-700 start-time text-center">${currentStartTime}</td>
+                    <td class="py-2 px-2 text-sm font-mono font-medium text-slate-500 end-time text-center">${endTime}</td>
+                    <td class="py-2 px-2 text-center min-w-[68px]"><input type="number" min="0" class="table-input text-center font-mono text-sm px-1 min-w-[44px]" value="${item.duration}" onchange="handleInput('${item.id}', 'duration', this.value)"></td>
+                    <td class="py-2 px-2"><textarea rows="1" class="table-textarea font-medium" oninput="autoResize(this); handleInput('${item.id}', 'activity', this.value)" placeholder="輸入環節名稱...">${item.activity}</textarea></td>
+                    <td class="py-2 px-2"><textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleInput('${item.id}', 'pic', this.value)" placeholder="負責人...">${item.pic}</textarea></td>
+                    <td class="py-2 px-1"><input type="number" min="0" class="table-input text-center text-sm px-0" value="${item.vocalMic !== undefined ? item.vocalMic : ''}" oninput="handleInput('${item.id}', 'vocalMic', this.value)" placeholder="-"></td>
+                    <td class="py-2 px-1"><input type="number" min="0" class="table-input text-center text-sm px-0" value="${item.singerMic !== undefined ? item.singerMic : ''}" oninput="handleInput('${item.id}', 'singerMic', this.value)" placeholder="-"></td>
+                    <td class="py-2 px-1"><input type="number" min="0" class="table-input text-center text-sm px-0" value="${item.headsetMic !== undefined ? item.headsetMic : ''}" oninput="handleInput('${item.id}', 'headsetMic', this.value)" placeholder="-"></td>
+                    <td class="py-2 px-2"><textarea rows="1" class="table-textarea text-sm" oninput="autoResize(this); handleInput('${item.id}', 'multimedia', this.value)" placeholder="PPT / 影片...">${item.multimedia || ''}</textarea></td>
+                    <td class="py-2 px-2"><textarea rows="1" class="table-textarea text-sm text-slate-500" oninput="autoResize(this); handleInput('${item.id}', 'remarks', this.value)" placeholder="備註事項...">${item.remarks}</textarea></td>
+                    <td class="admin-only py-2 px-2 no-print text-center"><button onclick="deleteRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
                 `; tbody.appendChild(tr); currentStartTime = endTime;
             });
+            
+            // 渲染後自動觸發所有文字框的高度調整
+            setTimeout(() => {
+                document.querySelectorAll('#rundownTable .table-textarea').forEach(el => autoResize(el));
+            }, 10);
         }
 
         function addRow() { rundownData.push({ id: generateId(), duration: 10, activity: '', pic: '', vocalMic: '', singerMic: '', headsetMic: '', multimedia: '', remarks: '' }); renderTable(); setTimeout(() => { const c = document.querySelector('.overflow-y-auto'); c.scrollTop = c.scrollHeight; }, 50); }
@@ -652,6 +682,10 @@
         // ---------------------------------------------------
         // 7. 版面預覽切換 (Layout Switcher)
         // ---------------------------------------------------
+        function recalculateAllTextareas() {
+            document.querySelectorAll('#rundownTable .table-textarea').forEach(el => autoResize(el));
+        }
+
         function switchLayout(mode) {
             const main = document.getElementById('mainContainer');
             const btnMobile = document.getElementById('btn-layout-mobile');
@@ -680,6 +714,11 @@
                 btnDesktop.className = activeBtnClass;
             }
             
+            // 在版面過渡與結束時重新計算文字框高度（Mobile 最窄高度最高，Tablet 次高）
+            recalculateAllTextareas();
+            setTimeout(recalculateAllTextareas, 250);
+            setTimeout(recalculateAllTextareas, 550);
+
             // 觸發視窗重繪，確保表格寬度重新計算
             window.dispatchEvent(new Event('resize'));
         }
