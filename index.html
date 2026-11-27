@@ -19,7 +19,7 @@
         @media print {
             body { background-color: #fff; }
             .no-print { display: none !important; }
-            .print-full-width { width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+            .print-full-width { width: 100% !important; max-width: 100% !important; padding: 0 !important; margin: 0 !important; border: none !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
             input, textarea { border: none !important; background: transparent !important; resize: none; overflow: hidden; }
             table { border-collapse: collapse; width: 100%; }
             th, td { border: 1px solid #cbd5e1 !important; padding: 8px !important; }
@@ -69,18 +69,18 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <i class="fa-solid fa-clipboard-list text-2xl"></i>
-                <h1 class="text-xl font-bold tracking-wider">RUNDOWN MAKER</h1>
-                <span id="modeBadge" class="text-xs font-semibold px-2 py-1 rounded bg-slate-500 text-white ml-2">唯讀模式</span>
+                <h1 class="text-xl font-bold tracking-wider hidden sm:block">RUNDOWN MAKER</h1>
+                <span id="modeBadge" class="text-xs font-semibold px-2 py-1 rounded bg-slate-500 text-white ml-2 whitespace-nowrap">唯讀模式</span>
+                
+                <!-- 版面切換器 -->
+                <div class="hidden md:flex items-center bg-indigo-700/50 rounded-lg p-1 ml-4 border border-indigo-500/30">
+                    <button onclick="switchLayout('mobile')" id="btn-layout-mobile" class="px-3 py-1 rounded text-indigo-100 hover:text-white hover:bg-indigo-600 transition" title="預覽手機版面"><i class="fa-solid fa-mobile-screen"></i></button>
+                    <button onclick="switchLayout('tablet')" id="btn-layout-tablet" class="px-3 py-1 rounded text-indigo-100 hover:text-white hover:bg-indigo-600 transition" title="預覽平板版面"><i class="fa-solid fa-tablet-screen-button"></i></button>
+                    <button onclick="switchLayout('desktop')" id="btn-layout-desktop" class="px-3 py-1 rounded bg-white text-indigo-700 shadow transition" title="預覽桌面版面"><i class="fa-solid fa-desktop"></i></button>
+                </div>
             </div>
-            <div class="flex gap-3">
-                <button id="loginBtn" onclick="openLoginModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded shadow transition text-sm font-medium">
-                    <i class="fa-solid fa-lock mr-2"></i>管理員登入
-                </button>
-                <button id="logoutBtn" onclick="logout()" class="hidden bg-rose-500 hover:bg-rose-400 px-4 py-2 rounded shadow transition text-sm font-medium">
-                    <i class="fa-solid fa-unlock mr-2"></i>登出
-                </button>
-                <button onclick="openHistoryModal()" class="bg-amber-500 hover:bg-amber-400 px-4 py-2 rounded shadow transition text-sm font-medium">
-                    <i class="fa-solid fa-folder-open mr-2"></i>載入紀錄
+            <div class="flex gap-3 overflow-x-auto hide-scrollbar">
+                <button id="loginBtn" onclick="openLoginModal()" class="shrink-0 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded shadow transition text-sm font-medium">
                 </button>
                 <button onclick="exportCSV()" class="bg-indigo-500 hover:bg-indigo-400 px-4 py-2 rounded shadow transition text-sm font-medium">
                     <i class="fa-solid fa-file-csv mr-2"></i>匯出 CSV
@@ -96,7 +96,7 @@
     </header>
 
     <!-- 主要內容區 -->
-    <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full print-full-width">
+    <main id="mainContainer" class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full print-full-width transition-all duration-500 ease-in-out origin-top">
         
         <!-- 活動基本資訊卡片 -->
         <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border border-slate-100">
@@ -253,7 +253,7 @@
         // ---------------------------------------------------
         
         let isAdmin = false;
-        const ADMIN_PW = "2c62"; // ★ 你可以在這裡更改管理員預設密碼
+        const ADMIN_PW = "1964"; // ★ 在這裡把 "1234" 改成你想要的密碼，記得保留前後的雙引號
 
         let rundownData = [
             { id: generateId(), duration: 30, activity: '嘉賓入場及報到', pic: '接待組', remarks: '播放背景音樂，準備簽到表' },
@@ -452,10 +452,17 @@
                 crew: crewData, band: bandData, rundown: rundownData, timestamp: new Date().toISOString()
             };
 
-            try { let lh = JSON.parse(localStorage.getItem('rundown_history') || '[]'); lh.push(payload); localStorage.setItem('rundown_history', JSON.stringify(lh)); } catch(e){}
+            // 檢查本機備份是否有同名活動，有則覆蓋，無則新增
+            try { 
+                let lh = JSON.parse(localStorage.getItem('rundown_history') || '[]'); 
+                const existingIndex = lh.findIndex(item => item.eventName === payload.eventName);
+                if (existingIndex !== -1) lh[existingIndex] = payload; 
+                else lh.push(payload);
+                localStorage.setItem('rundown_history', JSON.stringify(lh)); 
+            } catch(e){}
 
             fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-            .then(() => showToast('已發送資料至雲端！', 'success'))
+            .then(() => showToast('已儲存至雲端！(同名活動已覆蓋)', 'success'))
             .catch(() => showToast('儲存失敗', 'error'))
             .finally(() => { btn.innerHTML = orig; btn.disabled = false; btn.classList.remove('opacity-75'); });
         }
@@ -619,6 +626,41 @@
                 console.error("解析紀錄時發生未預期錯誤:", e);
                 showToast('資料格式異常，部分內容可能無法載入', 'warning');
             }
+        }
+
+        // ---------------------------------------------------
+        // 7. 版面預覽切換 (Layout Switcher)
+        // ---------------------------------------------------
+        function switchLayout(mode) {
+            const main = document.getElementById('mainContainer');
+            const btnMobile = document.getElementById('btn-layout-mobile');
+            const btnTablet = document.getElementById('btn-layout-tablet');
+            const btnDesktop = document.getElementById('btn-layout-desktop');
+
+            // 重置按鈕樣式
+            const defaultBtnClass = "px-3 py-1 rounded text-indigo-100 hover:text-white hover:bg-indigo-600 transition";
+            const activeBtnClass = "px-3 py-1 rounded bg-white text-indigo-700 shadow transition font-bold";
+            
+            btnMobile.className = defaultBtnClass;
+            btnTablet.className = defaultBtnClass;
+            btnDesktop.className = defaultBtnClass;
+
+            // 基礎容器樣式
+            let baseClasses = "flex-grow p-4 sm:p-6 lg:p-8 mx-auto w-full print-full-width transition-all duration-500 ease-in-out origin-top";
+            
+            if (mode === 'mobile') {
+                main.className = baseClasses + " max-w-[400px] border-x-[12px] border-y-[24px] border-slate-800 bg-slate-100 shadow-2xl mt-6 rounded-[2.5rem] overflow-hidden relative";
+                btnMobile.className = activeBtnClass;
+            } else if (mode === 'tablet') {
+                main.className = baseClasses + " max-w-[820px] border-x-[16px] border-y-[32px] border-slate-800 bg-slate-100 shadow-2xl mt-6 rounded-[2rem] overflow-hidden relative";
+                btnTablet.className = activeBtnClass;
+            } else {
+                main.className = baseClasses + " max-w-7xl";
+                btnDesktop.className = activeBtnClass;
+            }
+            
+            // 觸發視窗重繪，確保表格寬度重新計算
+            window.dispatchEvent(new Event('resize'));
         }
 
         window.onload = () => { document.getElementById('eventDate').valueAsDate = new Date(); renderCrewTable(); renderBandTable(); renderTable(); };
