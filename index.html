@@ -201,6 +201,10 @@
                             <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-24 text-center">時長(分)</th>
                             <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[200px]">環節內容 (Activity)</th>
                             <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">負責人 (PIC)</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center" title="人聲咪數量">人聲咪</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center" title="歌手咪數量">歌手咪</th>
+                            <th class="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 text-center" title="頭咪數量">頭咪</th>
+                            <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">多媒體</th>
                             <th class="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[150px]">備註 (Remarks)</th>
                             <th class="admin-only py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16 no-print text-center">刪除</th>
                         </tr>
@@ -269,10 +273,10 @@
         const ADMIN_PW = "1964"; // ★ 在這裡把 "1234" 改成你想要的密碼，記得保留前後的雙引號
 
         let rundownData = [
-            { id: generateId(), duration: 30, activity: '嘉賓入場及報到', pic: '接待組', remarks: '播放背景音樂，準備簽到表' },
-            { id: generateId(), duration: 10, activity: '主持人開場', pic: 'MC', remarks: '介紹今日活動目的及來賓' },
-            { id: generateId(), duration: 20, activity: '長官致詞', pic: '總經理', remarks: '準備講台與麥克風' },
-            { id: generateId(), duration: 15, activity: '中場休息 (Coffee Break)', pic: '場務組', remarks: '引導至茶水區' }
+            { id: generateId(), duration: 30, activity: '嘉賓入場及報到', pic: '接待組', vocalMic: '', singerMic: '', headsetMic: '', multimedia: '迎賓音樂 (BGM)', remarks: '準備簽到表' },
+            { id: generateId(), duration: 10, activity: '主持人開場', pic: 'MC', vocalMic: '2', singerMic: '', headsetMic: '', multimedia: '開場 PPT P.1', remarks: '介紹今日活動目的及來賓' },
+            { id: generateId(), duration: 20, activity: '長官致詞', pic: '總經理', vocalMic: '1', singerMic: '', headsetMic: '', multimedia: '大會 Logo 靜態圖', remarks: '準備講台' },
+            { id: generateId(), duration: 15, activity: '中場休息 (Coffee Break)', pic: '場務組', vocalMic: '', singerMic: '', headsetMic: '', multimedia: '休息時間倒數影片', remarks: '引導至茶水區' }
         ];
 
         let crewData = [
@@ -430,13 +434,17 @@
                     <td class="py-2 px-4 text-center"><input type="number" min="0" class="table-input text-center font-mono" value="${item.duration}" onchange="handleInput('${item.id}', 'duration', this.value)"></td>
                     <td class="py-2 px-4"><input type="text" class="table-input font-medium" value="${item.activity}" oninput="handleInput('${item.id}', 'activity', this.value)" placeholder="輸入環節名稱..."></td>
                     <td class="py-2 px-4"><input type="text" class="table-input text-sm" value="${item.pic}" oninput="handleInput('${item.id}', 'pic', this.value)" placeholder="負責人..."></td>
+                    <td class="py-2 px-2"><input type="number" min="0" class="table-input text-center text-sm px-1" value="${item.vocalMic !== undefined ? item.vocalMic : ''}" oninput="handleInput('${item.id}', 'vocalMic', this.value)" placeholder="-"></td>
+                    <td class="py-2 px-2"><input type="number" min="0" class="table-input text-center text-sm px-1" value="${item.singerMic !== undefined ? item.singerMic : ''}" oninput="handleInput('${item.id}', 'singerMic', this.value)" placeholder="-"></td>
+                    <td class="py-2 px-2"><input type="number" min="0" class="table-input text-center text-sm px-1" value="${item.headsetMic !== undefined ? item.headsetMic : ''}" oninput="handleInput('${item.id}', 'headsetMic', this.value)" placeholder="-"></td>
+                    <td class="py-2 px-4"><input type="text" class="table-input text-sm" value="${item.multimedia || ''}" oninput="handleInput('${item.id}', 'multimedia', this.value)" placeholder="PPT / 影片..."></td>
                     <td class="py-2 px-4"><input type="text" class="table-input text-sm text-slate-500" value="${item.remarks}" oninput="handleInput('${item.id}', 'remarks', this.value)" placeholder="備註事項..."></td>
                     <td class="admin-only py-2 px-4 no-print text-center"><button onclick="deleteRow('${item.id}')" class="text-slate-300 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button></td>
                 `; tbody.appendChild(tr); currentStartTime = endTime;
             });
         }
 
-        function addRow() { rundownData.push({ id: generateId(), duration: 10, activity: '', pic: '', remarks: '' }); renderTable(); setTimeout(() => { const c = document.querySelector('.overflow-y-auto'); c.scrollTop = c.scrollHeight; }, 50); }
+        function addRow() { rundownData.push({ id: generateId(), duration: 10, activity: '', pic: '', vocalMic: '', singerMic: '', headsetMic: '', multimedia: '', remarks: '' }); renderTable(); setTimeout(() => { const c = document.querySelector('.overflow-y-auto'); c.scrollTop = c.scrollHeight; }, 50); }
         function deleteRow(id) { if (rundownData.length <= 1) return showToast('流程表至少需保留一環節', 'warning'); rundownData = rundownData.filter(item => item.id !== id); renderTable(); }
         function moveRow(index, direction) { if (index + direction < 0 || index + direction >= rundownData.length) return; const temp = rundownData[index]; rundownData[index] = rundownData[index + direction]; rundownData[index + direction] = temp; renderTable(); }
 
@@ -449,9 +457,9 @@
             crewData.forEach(i => csv += `"${i.role}","${i.name}","${i.contact}"\n`);
             csv += `\n樂隊與音響清單\nCH,樂器/輸入,收音方式/麥克風,樂手,備註\n`;
             bandData.forEach(i => csv += `"${i.ch}","${i.input}","${i.mic}","${i.musician}","${i.remarks}"\n`);
-            csv += "\n流程表\n開始時間,結束時間,時長(分鐘),環節內容,負責人,備註\n";
+            csv += "\n流程表\n開始時間,結束時間,時長(分鐘),環節內容,負責人,人聲咪數量,歌手咪數量,頭咪數量,多媒體,備註\n";
             let start = document.getElementById('startTime').value;
-            rundownData.forEach(i => { let end = addMinutesToTime(start, i.duration); csv += `${start},${end},${i.duration},"${i.activity}","${i.pic}","${i.remarks}"\n`; start = end; });
+            rundownData.forEach(i => { let end = addMinutesToTime(start, i.duration); csv += `${start},${end},${i.duration},"${i.activity}","${i.pic}","${i.vocalMic || ''}","${i.singerMic || ''}","${i.headsetMic || ''}","${i.multimedia || ''}","${i.remarks}"\n`; start = end; });
             const link = document.createElement("a"); link.href = encodeURI(csv); link.download = "流程表.csv"; document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
@@ -625,7 +633,7 @@
                 
                 // 4. 空陣列防呆 (確保畫面至少有一行輸入框，避免版面異常)
                 if (crewData.length === 0) crewData.push({ id: generateId(), role: '', name: '', contact: '' });
-                if (rundownData.length === 0) rundownData.push({ id: generateId(), duration: 10, activity: '', pic: '', remarks: '' }); 
+                if (rundownData.length === 0) rundownData.push({ id: generateId(), duration: 10, activity: '', pic: '', vocalMic: '', singerMic: '', headsetMic: '', multimedia: '', remarks: '' }); 
                 
                 // 5. 強制重新渲染三個表格
                 renderCrewTable(); 
